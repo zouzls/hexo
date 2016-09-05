@@ -1,2 +1,2 @@
 # zouzls.github.io
-gs chen's blog
+Gs Chen's blog
