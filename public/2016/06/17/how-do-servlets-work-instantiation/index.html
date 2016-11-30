@@ -1,0 +1,798 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css"/>
+
+
+
+
+  <link href="//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=0.5.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="servlet," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="Gs Chen's blog" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favorite.png?v=0.5.0" />
+
+
+
+
+
+
+<meta name="description" content="问题：假设，我有一个web服务器可以支持无数的servlets，对于通过这些servlets的信息，我正在获取这些servlets的上下文环境，并设置session变量。现在，如果有两个或者更多的user用户发送请求到这个服务器，session变量会发生什么变化？session对于所有的user是公共的还是不同的user拥有不同的session。如果用户彼此之间的session是不同的，那么服务器">
+<meta property="og:type" content="article">
+<meta property="og:title" content="How do servlets work? Instantiation, shared variables and multithreading">
+<meta property="og:url" content="https://zouzls.github.io/2016/06/17/how-do-servlets-work-instantiation/index.html">
+<meta property="og:site_name" content="Gs Chen's blog">
+<meta property="og:description" content="问题：假设，我有一个web服务器可以支持无数的servlets，对于通过这些servlets的信息，我正在获取这些servlets的上下文环境，并设置session变量。现在，如果有两个或者更多的user用户发送请求到这个服务器，session变量会发生什么变化？session对于所有的user是公共的还是不同的user拥有不同的session。如果用户彼此之间的session是不同的，那么服务器">
+<meta property="og:updated_time" content="2016-07-28T01:30:45.598Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="How do servlets work? Instantiation, shared variables and multithreading">
+<meta name="twitter:description" content="问题：假设，我有一个web服务器可以支持无数的servlets，对于通过这些servlets的信息，我正在获取这些servlets的上下文环境，并设置session变量。现在，如果有两个或者更多的user用户发送请求到这个服务器，session变量会发生什么变化？session对于所有的user是公共的还是不同的user拥有不同的session。如果用户彼此之间的session是不同的，那么服务器">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: undefined,
+      author: 'Author'
+    }
+  };
+</script>
+
+  <title> How do servlets work? Instantiation, shared variables and multithreading | Gs Chen's blog </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?44cb51503f54763b661c4ae7590d184f";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Gs Chen's blog</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle"></p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-home fa-fw"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-th fa-fw"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-archive fa-fw"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-tags fa-fw"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-user fa-fw"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                How do servlets work? Instantiation, shared variables and multithreading
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">Posted on</span>
+            <time itemprop="dateCreated" datetime="2016-06-17T14:23:51+08:00" content="2016-06-17">
+              2016-06-17
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/Javaweb/" itemprop="url" rel="index">
+                    <span itemprop="name">Javaweb</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2016/06/17/how-do-servlets-work-instantiation/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/06/17/how-do-servlets-work-instantiation/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+             <span id="/2016/06/17/how-do-servlets-work-instantiation/" class="leancloud_visitors" data-flag-title="How do servlets work? Instantiation, shared variables and multithreading">
+               &nbsp; | &nbsp;
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               <span class="post-meta-item-text">visitors </span>
+               <span class="leancloud-visitors-count"></span>
+              </span>
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="问题："><a href="#问题：" class="headerlink" title="问题："></a>问题：</h3><p>假设，我有一个web服务器可以支持无数的servlets，对于通过这些servlets的信息，我正在获取这些servlets的上下文环境，并设置session变量。<br>现在，如果有两个或者更多的user用户发送请求到这个服务器，session变量会发生什么变化？session对于所有的user是公共的还是不同的user拥有不同的session。如果用户彼此之间的session是不同的，那么服务器怎么区分辨别不同的用户呢？<br>另外一些相似的问题，如果有N个用户访问一个具体的servlets，那么这个servlets是只在第一个用户第一次访问的时候实例化，还是为每一个用户各自实例化呢？<br><a id="more"></a></p>
+<h3 id="答案："><a href="#答案：" class="headerlink" title="答案："></a>答案：</h3><h4 id="ServletContext"><a href="#ServletContext" class="headerlink" title="ServletContext"></a>ServletContext</h4><p>当servletcontainer（像tomcat）启动的时候，它会部署和加载所有的webapplications，当一个webapplication加载完成后，servletcontainer就会创建一个ServletContext，并且保存在服务器的内存中。这个webapp的web.xml会被解析，web.xml中的每个servlet, filter 和 listener或者通过注解@WebServlet, @WebFilter and @WebListener，都会被创建一次并且也保存在服务器的内存中。对于所有filter，init()方法会被直接触发，当servletcontainer关闭的时候，它会unload所有的webapplications,触发所有实例化的servlets和filters的destroy()方法,最后，servletcontext和所有的servlets，filter和listener实例都会被销毁。</p>
+<h4 id="HttpServletRequest-and-HttpServletResponse"><a href="#HttpServletRequest-and-HttpServletResponse" class="headerlink" title="HttpServletRequest and HttpServletResponse"></a>HttpServletRequest and HttpServletResponse</h4><p>servletcontainer 是附属于webserver的，而这个webserver会持续监听一个目标端口的HTTP request请求，这个端口在开发中经常会被设置成8080，而在生产环境会被设置成80。当一个客户端（比如用户的浏览器）发送一个HTTP request，servletcontainer就会创建新的HttpServletRequest对象和HttpServletResponse对象。。。。</p>
+<p>在有filter的情况下，doFilter()方法会被触发。当代码调用chain.doFilter(request, response)时候，请求会经过下一个过滤器filter，如果没有了过滤器，会到达servlet。在servlets的情况下，service()触发，然后根据request.getMethod()确定执行doGet()还是doPost()，如果当前servlet找不到请求的方法，返回405error。</p>
+<p>request对象提供了HTTP请求所有的信息，比如request headers和request body，response对象提供了控制和发送HTTP响应的的能力，并且以你想要的方式，比如设置headers和body。当HTTP响应结束，请求和响应对象会被销毁（实际上，大多数container将会清洗到这些对象的状态然后回收这些事例以重新利用）</p>
+<h4 id="httpSession"><a href="#httpSession" class="headerlink" title="httpSession"></a>httpSession</h4><p>当客户端第一次访问webapp或者通过request.getSession()方法第一次获取httpSession<br>，servletcontainer 将会创建一个新的HttpSession 对象，产生一个长的唯一的ID标记session（可以通过session.getId()）,并且将这个session存储在server内存中。servletcontainer 同时会在HTTP response的Header中设置Set-Cookie值，其中cookie name为JSESSIONID，cookie value为唯一的长ID值。</p>
+<p>在接下来的连续请求中，客户端浏览器都要cookie通过header带回，然后servletcontainer 会根据cookie中的JSESSIONID 值，获得server内存中的对应的httpSession。</p>
+<p>只要没超过session-timeout设定的值，httpSession对象会一直存在，session-timeout大小可以在web.xml中设定，默认是30分钟。所以如果连续30分钟之内客户端不再访问webapp，servletcontainer就会销毁对应的session。接下来的request请求即使cookies依旧存在，但是却不再有对应的session了。servletcontainer 会创建新的session。</p>
+<p>另外一方面，session cookie在浏览器端有默认的生命时长，就是只要浏览器一直在运行，所以当浏览器关闭，浏览器端的cookie会被销毁。</p>
+<h4 id="最后"><a href="#最后" class="headerlink" title="最后"></a>最后</h4><ul>
+<li>只要webapp存在，ServletContext 一定会存在。并且ServletContext 是被所有session和request共享的。</li>
+<li>只要客户端用同一个浏览器和webapp交互并且该session没有在服务端超时，HttpSession 就会一直存在。并且在同一个会话中所有请求都是共享的。</li>
+<li>只有当完整的response响应到达，HttpServletRequest 和 HttpServletResponse才不再存活，并且不被共享。</li>
+<li>只要webapp存在，servlet、filter和listener就会存在。他们被所有请求和会话共享。</li>
+<li>只要问题中的对象存在，任何设置在ServletContext, HttpServletRequest 和 HttpSession中的属性就会存在。</li>
+</ul>
+<h4 id="线程安全"><a href="#线程安全" class="headerlink" title="线程安全"></a>线程安全</h4><p>就是说，你主要关注的是线程安全性。你应该了解到，servlets和filter是被所有请求共享的。这正是Java的美妙之处，它的多线程和不同的线程可以充分利用同样的实例instance，否则对于每一个request请求都要重复创建和调用init()和destroy()开销太大。</p>
+<p>但是你也应该注意到，你不应该把任何请求或会话作用域的数据作为一个servlet或过滤器的实例变量。这样会被其他会话的请求共享，并且那是线程不安全的！下面的例子阐明的这点：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ExampleServlet</span> <span class="keyword">extends</span> <span class="title">HttpServlet</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> Object thisIsNOTThreadSafe;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">doGet</span><span class="params">(HttpServletRequest request, HttpServletResponse response)</span> <span class="keyword">throws</span> ServletException, IOException </span>&#123;</span><br><span class="line">        Object thisIsThreadSafe;</span><br><span class="line"></span><br><span class="line">        thisIsNOTThreadSafe = request.getParameter(<span class="string">"foo"</span>); <span class="comment">// BAD!! Shared among all requests!</span></span><br><span class="line">        thisIsThreadSafe = request.getParameter(<span class="string">"foo"</span>); <span class="comment">// OK, this is thread safe.</span></span><br><span class="line">    &#125; </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>原答案stackoverflow链接：</p>
+<p><a href="http://stackoverflow.com/questions/3106452/how-do-servlets-work-instantiation-shared-variables-and-multithreading" target="_blank" rel="external">http://stackoverflow.com/questions/3106452/how-do-servlets-work-instantiation-shared-variables-and-multithreading</a></p>
+<p>-EOF-</p>
+
+      
+    </div>
+    
+    <div>
+      
+        
+      
+    </div>
+
+    <div>
+      
+        
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/servlet/" rel="tag">#servlet</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/04/21/用hexo搭建个人博客/" rel="next" title="用Hexo搭建个人博客">
+                <i class="fa fa-chevron-left"></i> 用Hexo搭建个人博客
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2016/06/17/朝花夕拾之重回母校/" rel="prev" title="朝花夕拾之重回母校">
+                朝花夕拾之重回母校 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        <!-- JiaThis Button BEGIN -->
+<div class="jiathis_style">
+  <a class="jiathis_button_tsina"></a>
+  <a class="jiathis_button_tqq"></a>
+  <a class="jiathis_button_weixin"></a>
+  <a class="jiathis_button_cqq"></a>
+  <a class="jiathis_button_douban"></a>
+  <a class="jiathis_button_renren"></a>
+  <a class="jiathis_button_qzone"></a>
+  <a class="jiathis_button_kaixin001"></a>
+  <a class="jiathis_button_copy"></a>
+  <a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jiathis_separator jtico jtico_jiathis" target="_blank"></a>
+  <a class="jiathis_counter_style"></a>
+</div>
+<script type="text/javascript" >
+  var jiathis_config={
+    hideMore:false
+  }
+</script>
+<script type="text/javascript" src="http://v3.jiathis.com/code/jia.js" charset="utf-8"></script>
+<!-- JiaThis Button END -->
+
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div class="ds-thread" data-thread-key="2016/06/17/how-do-servlets-work-instantiation/"
+           data-title="How do servlets work? Instantiation, shared variables and multithreading" data-url="https://zouzls.github.io/2016/06/17/how-do-servlets-work-instantiation/">
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/uploads/avatar.png"
+               alt="Gs Chen" />
+          <p class="site-author-name" itemprop="name">Gs Chen</p>
+          <p class="site-description motion-element" itemprop="description">Widen grain , Highten wall</p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">22</span>
+              <span class="site-state-item-name">posts</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">10</span>
+                <span class="site-state-item-name">categories</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">28</span>
+                <span class="site-state-item-name">tags</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/zouzls" target="_blank">
+                  
+                    <i class="fa fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="http://weibo.com/u/2109551834?is_all=1" target="_blank">
+                  
+                    <i class="fa fa-weibo"></i>
+                  
+                  Weibo
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="https://www.douban.com/people/zouzls/" target="_blank">
+                  
+                    <i class="fa fa-globe"></i>
+                  
+                  douban
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="https://www.zhihu.com/people/chen-gong-shuai" target="_blank">
+                  
+                    <i class="fa fa-globe"></i>
+                  
+                  zhihu
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        <div class="links-of-blogroll motion-element">
+          
+            <div class="links-of-blogroll-title">Links</div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://bodycoder101.github.io/" target="_blank">阿立</a>
+                </li>
+              
+            </ul>
+          
+        </div>
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#问题："><span class="nav-number">1.</span> <span class="nav-text">问题：</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#答案："><span class="nav-number">2.</span> <span class="nav-text">答案：</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#ServletContext"><span class="nav-number">2.1.</span> <span class="nav-text">ServletContext</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#HttpServletRequest-and-HttpServletResponse"><span class="nav-number">2.2.</span> <span class="nav-text">HttpServletRequest and HttpServletResponse</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#httpSession"><span class="nav-number">2.3.</span> <span class="nav-text">httpSession</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#最后"><span class="nav-number">2.4.</span> <span class="nav-text">最后</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#线程安全"><span class="nav-number">2.5.</span> <span class="nav-text">线程安全</span></a></li></ol></li></ol></div>
+            
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Gs Chen</span>
+</div>
+
+<div class="powered-by">
+  Powered by <a class="theme-link" href="http://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+  &nbsp&nbsp&nbsp&nbsp|&nbsp&nbsp&nbsp&nbsp<span id="busuanzi_container_site_pv">您是本站第 <span id="busuanzi_value_site_uv"></span>位访客</span>
+</div>
+<script async src="//dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+
+  
+
+
+
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=0.5.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=0.5.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=0.5.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=0.5.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=0.5.0"></script>
+
+
+
+  
+
+  
+    
+  
+
+  <script type="text/javascript">
+    var duoshuoQuery = {short_name:"zouzls"};
+    (function() {
+      var ds = document.createElement('script');
+      ds.type = 'text/javascript';ds.async = true;
+      ds.id = 'duoshuo-script';
+      ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '/js/embed.js';
+      ds.charset = 'UTF-8';
+      (document.getElementsByTagName('head')[0]
+      || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+  </script>
+
+  
+
+
+
+
+
+  
+  
+  
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("EunLkIm0xOFA4ygpTWAXwVKo-gzGzoHsz", "Bj4JrGlyqyFuK27yOwt8eDw8");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+</body>
+</html>

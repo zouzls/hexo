@@ -1,0 +1,815 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css"/>
+
+
+
+
+  <link href="//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=0.5.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="docker,windows10,安装,启动," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="Gs Chen's blog" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favorite.png?v=0.5.0" />
+
+
+
+
+
+
+<meta name="description" content="背景第一次听到docker这个词是15年7月份，老板让项目组老大看看docker相关技术，据说是可以提高公司项目部署的效率，不过遗憾的是的当时已经准备快离职了，所以没能早一点一睹docker容器的庐山真面目。现在看来docker的热度也不是一年之前能比的了，不过也激发了我对技术的好奇心，决定挖这样一个坑，来激励自己去研究一下docker的内部原理和实际应用。本篇文章记录安装过程中出现的一些问题和解">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Docker学习之安装与启动">
+<meta property="og:url" content="https://zouzls.github.io/2016/07/27/Docker学习之安装与启动/index.html">
+<meta property="og:site_name" content="Gs Chen's blog">
+<meta property="og:description" content="背景第一次听到docker这个词是15年7月份，老板让项目组老大看看docker相关技术，据说是可以提高公司项目部署的效率，不过遗憾的是的当时已经准备快离职了，所以没能早一点一睹docker容器的庐山真面目。现在看来docker的热度也不是一年之前能比的了，不过也激发了我对技术的好奇心，决定挖这样一个坑，来激励自己去研究一下docker的内部原理和实际应用。本篇文章记录安装过程中出现的一些问题和解">
+<meta property="og:image" content="http://oaewlsdmg.bkt.clouddn.com/image/jpg/3bf33a87e950352a23e067375043fbf2b2118b08.jpg">
+<meta property="og:image" content="http://oaewlsdmg.bkt.clouddn.com/image/jpg/192152313325897.jpg">
+<meta property="og:image" content="http://oaewlsdmg.bkt.clouddn.com/image/jpg/QQ%E6%88%AA%E5%9B%BE20160727152117.png">
+<meta property="og:image" content="http://oaewlsdmg.bkt.clouddn.com/image/jpg/QQ%E6%88%AA%E5%9B%BE20160727153322.png">
+<meta property="og:image" content="http://oaewlsdmg.bkt.clouddn.com/image/jpg/QQ%E6%88%AA%E5%9B%BE20160727201002.png">
+<meta property="og:image" content="http://oaewlsdmg.bkt.clouddn.com/image/jpg/QQ%E6%88%AA%E5%9B%BE20160727190746.png">
+<meta property="og:updated_time" content="2016-08-26T09:50:15.239Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Docker学习之安装与启动">
+<meta name="twitter:description" content="背景第一次听到docker这个词是15年7月份，老板让项目组老大看看docker相关技术，据说是可以提高公司项目部署的效率，不过遗憾的是的当时已经准备快离职了，所以没能早一点一睹docker容器的庐山真面目。现在看来docker的热度也不是一年之前能比的了，不过也激发了我对技术的好奇心，决定挖这样一个坑，来激励自己去研究一下docker的内部原理和实际应用。本篇文章记录安装过程中出现的一些问题和解">
+<meta name="twitter:image" content="http://oaewlsdmg.bkt.clouddn.com/image/jpg/3bf33a87e950352a23e067375043fbf2b2118b08.jpg">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: undefined,
+      author: 'Author'
+    }
+  };
+</script>
+
+  <title> Docker学习之安装与启动 | Gs Chen's blog </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?44cb51503f54763b661c4ae7590d184f";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Gs Chen's blog</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle"></p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-home fa-fw"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-th fa-fw"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-archive fa-fw"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-tags fa-fw"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-user fa-fw"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Docker学习之安装与启动
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">Posted on</span>
+            <time itemprop="dateCreated" datetime="2016-07-27T13:43:33+08:00" content="2016-07-27">
+              2016-07-27
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/Docker/" itemprop="url" rel="index">
+                    <span itemprop="name">Docker</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2016/07/27/Docker学习之安装与启动/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/07/27/Docker学习之安装与启动/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+             <span id="/2016/07/27/Docker学习之安装与启动/" class="leancloud_visitors" data-flag-title="Docker学习之安装与启动">
+               &nbsp; | &nbsp;
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               <span class="post-meta-item-text">visitors </span>
+               <span class="leancloud-visitors-count"></span>
+              </span>
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h3><p>第一次听到docker这个词是15年7月份，老板让项目组老大看看docker相关技术，据说是可以提高公司项目部署的效率，不过遗憾的是的当时已经准备快离职了，所以没能早一点一睹docker容器的庐山真面目。现在看来docker的热度也不是一年之前能比的了，不过也激发了我对技术的好奇心，决定挖这样一个坑，来激励自己去研究一下docker的内部原理和实际应用。本篇文章记录安装过程中出现的一些问题和解决过程，重点在于启动过程中的几个错误。<br>注：不同的系统和硬件环境下安装文件和过程不太一样，所以:</p>
+<ol>
+<li>采用Docker Toolbox方式安装的请绕行。</li>
+<li>以下适用于Docker for Windows Beta的安装，详情请看下面「安装-环境要求」。</li>
+</ol>
+<a id="more"></a>
+<h3 id="安装"><a href="#安装" class="headerlink" title="安装"></a>安装</h3><h4 id="环境要求（非常重要！）"><a href="#环境要求（非常重要！）" class="headerlink" title="环境要求（非常重要！）"></a>环境要求（非常重要！）</h4><ul>
+<li>系统环境<br>64bit Windows 10 Pro, Enterprise and Education (1511 November update, Build 10586 or later)。在cortana输入框键入winver，然后回车enter即可查看系统版本。</li>
+<li>内存大小<br>最好是&gt;4G内存,后面为docker分配的内存至少是1G，太小的内存可能导致启动不成功。</li>
+<li>Hyper-V开启<br>如果不支持Hyper-V虚拟化，就只能用 Docker Toolbox方式安装了。查看是否支持Hyper-V方式如下，打开「任务管理器-性能」，默认是禁用的（如何开启见下方「启动-关于虚拟化未开启错误」），如下：<br><img src="http://oaewlsdmg.bkt.clouddn.com/image/jpg/3bf33a87e950352a23e067375043fbf2b2118b08.jpg" alt=""></li>
+</ul>
+<h4 id="下载-amp-安装"><a href="#下载-amp-安装" class="headerlink" title="下载&amp;安装"></a>下载&amp;安装</h4><p>进入<a href="https://docs.docker.com/docker-for-windows/" target="_blank" rel="external">页面</a>，点击Get Docker for Windows，下载完InstallDocker.msi文件直接安装即可，直到finish（launch Docker默认打勾），安装过程很快。</p>
+<h3 id="启动"><a href="#启动" class="headerlink" title="启动"></a>启动</h3><h4 id="关于「虚拟化未开启」错误"><a href="#关于「虚拟化未开启」错误" class="headerlink" title="关于「虚拟化未开启」错误"></a>关于「虚拟化未开启」错误</h4><p>安装完之后docker会尝试第一次启动，如果电脑Hyper-V之前未开启，docker会提示开启Hyper-V并且电脑随即进入重启，我在重启的时候忘记进入BIOS设置了，结果重启完之后，（因为docker安装完是设置开机自启动的）docker启动的时候就出现下面错误了。<br><strong>解决方式</strong>：再次重启，并且过程中进入BIOS，不同的电脑进入BIOS方式不同，Lenovo是按住F2，照下图操作即可：<br><img src="http://oaewlsdmg.bkt.clouddn.com/image/jpg/192152313325897.jpg" alt=""></p>
+<h4 id="关于「Unable-…Exit-1」错误"><a href="#关于「Unable-…Exit-1」错误" class="headerlink" title="关于「Unable …Exit 1」错误"></a>关于「Unable …Exit 1」错误</h4><p>当你觉得修改完BIOS，觉得已经万事大吉的时候，再重新Start docker的时候，可能又会如下错误，我在docker（1.12.0） build 5579的版本中遇到，错误码如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Unable to write to the database. Exit 1</span><br></pre></td></tr></table></figure></p>
+<p><strong>解决方式</strong>：打开网络与共享中心，可以看到多了一个关于docker虚拟机的vEthernet（DockerNAT）连接，点击进入，配置虚拟机的DNS网关并且禁用IPV6，如图：<br><img src="http://oaewlsdmg.bkt.clouddn.com/image/jpg/QQ%E6%88%AA%E5%9B%BE20160727152117.png" alt=""><br>配置完之后，再启动错误码就会消失了。</p>
+<h4 id="关于「Not-enough-memory」错误"><a href="#关于「Not-enough-memory」错误" class="headerlink" title="关于「Not enough memory」错误"></a>关于「Not enough memory」错误</h4><p>对于内存较低的可能出现启动时内存不够而导致失败的情况，因为docker默认是配置2G内存。<br><strong>解决方式</strong>：右键docker图标-setting-Advanced，如图：<br><img src="http://oaewlsdmg.bkt.clouddn.com/image/jpg/QQ%E6%88%AA%E5%9B%BE20160727153322.png" alt="">可以尝试不断减少Memory，直到启动OK，Docker正确启动后，左下角显示running。</p>
+<h3 id="Demo演示"><a href="#Demo演示" class="headerlink" title="Demo演示"></a>Demo演示</h3><p>下面尝试run两个container，第一个是hello-world，第二个是webserver。在执行docker run containerName命令之后，Docker会先在本地检查对应是否存在该镜像，如果不存在再到Docker Hub上检查，如果有则立即下载到宿主机。</p>
+<h4 id="hello-world"><a href="#hello-world" class="headerlink" title="hello-world"></a>hello-world</h4><p>在cmd或者PowerShell中输入：docker run hello-world，却不料出现Network timed out while trying to connect to…如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">bash.exe&quot;-3.1$ docker run hello-world</span><br><span class="line">Unable to find image &apos;hello-world:latest&apos; locally</span><br><span class="line">Pulling repository docker.io/library/hello-world</span><br><span class="line">c:\Program Files\Docker\Docker\Resources\bin\docker.exe: Network timed out while trying to connect to https://index.docker.io/v1/repositories/library/hello-world/images</span><br><span class="line">. You may want to check your internet connection or if you are behind a proxy..</span><br></pre></td></tr></table></figure></p>
+<p><strong>解决方式</strong>：通过Google从docker-machine restart default这条命令得到提示，如果直接执行该命令报错不成功，手动exit docker之后，重新start，再docker run hello-world，问题解决！<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">bash.exe&quot;-3.1$ docker run hello-world</span><br><span class="line">Unable to find image &apos;hello-world:latest&apos; locally</span><br><span class="line">latest: Pulling from library/hello-world</span><br><span class="line"></span><br><span class="line">c04b14da8d14: Pull complete</span><br><span class="line">Digest: sha256:0256e8a36e2070f7bf2d0b0763dbabdd67798512411de4cdcf9431a1feb60fd9</span><br><span class="line">Status: Downloaded newer image for hello-world:latest</span><br><span class="line"></span><br><span class="line">Hello from Docker!</span><br><span class="line">This message shows that your installation appears to be working correctly.</span><br><span class="line"></span><br><span class="line">To generate this message, Docker took the following steps:</span><br><span class="line"> 1. The Docker client contacted the Docker daemon.</span><br><span class="line"> 2. The Docker daemon pulled the &quot;hello-world&quot; image from the Docker Hub.</span><br><span class="line"> 3. The Docker daemon created a new container from that image which runs the</span><br><span class="line">    executable that produces the output you are currently reading.</span><br><span class="line"> 4. The Docker daemon streamed that output to the Docker client, which sent it</span><br><span class="line">    to your terminal.</span><br></pre></td></tr></table></figure></p>
+<h4 id="webserver-nginx"><a href="#webserver-nginx" class="headerlink" title="webserver nginx"></a>webserver nginx</h4><p>运行一个docker化的webserver，输入：docker run -d -p 80:80 –name webserver nginx，如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">bash.exe&quot;-3.1$ docker run -d -p 80:80 --name webserver nginx</span><br><span class="line">Unable to find image &apos;nginx:latest&apos; locally</span><br><span class="line">latest: Pulling from library/nginx</span><br><span class="line"></span><br><span class="line">51f5c6a04d83: Pull complete</span><br><span class="line">a3ed95caeb02: Pull complete</span><br><span class="line">51d229e136d0: Pull complete</span><br><span class="line">bcd41daec8cc: Pull complete</span><br><span class="line">Digest: sha256:0fe6413f3e30fcc5920bc8fa769280975b10b1c26721de956e1428b9e2f29d04</span><br><span class="line">Status: Downloaded newer image for nginx:latest</span><br><span class="line">592533495a5f766ce87c4460fe277460db9c5eed2469c87625a0d1ba2633dc43</span><br></pre></td></tr></table></figure></p>
+<p>继续执行：docker ps，可以看到各个容器的详情，不过目前只有一个nginx，如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                         NAMES</span><br><span class="line">592533495a5f        nginx               &quot;nginx -g &apos;daemon off&quot;   2 minutes ago       Up 2 minutes        0.0.0.0:80-&gt;80/tcp, 443/tcp   webserver</span><br></pre></td></tr></table></figure></p>
+<p>可以看到nginx的IP和端口是：0.0.0.0:80，浏览器访问localhost（或者docker/），就会看到如下页面：<br><img src="http://oaewlsdmg.bkt.clouddn.com/image/jpg/QQ%E6%88%AA%E5%9B%BE20160727201002.png" alt=""></p>
+<h3 id="Hyper-V管理器"><a href="#Hyper-V管理器" class="headerlink" title="Hyper-V管理器"></a>Hyper-V管理器</h3><p>windows自带有Hyper-V管理器，进入「开始菜单-windows管理工具」，可以看到新建的 Hyper-V管理器，打开之后可以看到WIN-4FQM25FK460虚拟机，以及虚拟机中正在运行的MobyLinuxVM实例，如下：<br><img src="http://oaewlsdmg.bkt.clouddn.com/image/jpg/QQ%E6%88%AA%E5%9B%BE20160727190746.png" alt=""></p>
+<h3 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h3><p><a href="https://docs.docker.com/docker-for-windows/" target="_blank" rel="external">Windows安装官方文档</a><br><a href="https://forums.docker.com/t/docker-1-12-for-windows-10-is-not-working/16647/2" target="_blank" rel="external">关于「Unable to write to the database. Exit 1」错误</a></p>
+<p>-EOF-</p>
+
+      
+    </div>
+    
+    <div>
+      
+        
+      
+    </div>
+
+    <div>
+      
+        
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/docker/" rel="tag">#docker</a>
+          
+            <a href="/tags/windows10/" rel="tag">#windows10</a>
+          
+            <a href="/tags/安装/" rel="tag">#安装</a>
+          
+            <a href="/tags/启动/" rel="tag">#启动</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/07/20/Tomcat源码分析之Connector初始化与启动/" rel="next" title="Tomcat源码分析之Connector初始化与启动">
+                <i class="fa fa-chevron-left"></i> Tomcat源码分析之Connector初始化与启动
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2016/08/26/Raft算法笔记（一）/" rel="prev" title="Raft算法笔记（一）">
+                Raft算法笔记（一） <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        <!-- JiaThis Button BEGIN -->
+<div class="jiathis_style">
+  <a class="jiathis_button_tsina"></a>
+  <a class="jiathis_button_tqq"></a>
+  <a class="jiathis_button_weixin"></a>
+  <a class="jiathis_button_cqq"></a>
+  <a class="jiathis_button_douban"></a>
+  <a class="jiathis_button_renren"></a>
+  <a class="jiathis_button_qzone"></a>
+  <a class="jiathis_button_kaixin001"></a>
+  <a class="jiathis_button_copy"></a>
+  <a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jiathis_separator jtico jtico_jiathis" target="_blank"></a>
+  <a class="jiathis_counter_style"></a>
+</div>
+<script type="text/javascript" >
+  var jiathis_config={
+    hideMore:false
+  }
+</script>
+<script type="text/javascript" src="http://v3.jiathis.com/code/jia.js" charset="utf-8"></script>
+<!-- JiaThis Button END -->
+
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div class="ds-thread" data-thread-key="2016/07/27/Docker学习之安装与启动/"
+           data-title="Docker学习之安装与启动" data-url="https://zouzls.github.io/2016/07/27/Docker学习之安装与启动/">
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/uploads/avatar.png"
+               alt="Gs Chen" />
+          <p class="site-author-name" itemprop="name">Gs Chen</p>
+          <p class="site-description motion-element" itemprop="description">Widen grain , Highten wall</p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">13</span>
+              <span class="site-state-item-name">posts</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">7</span>
+                <span class="site-state-item-name">categories</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">20</span>
+                <span class="site-state-item-name">tags</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/zouzls" target="_blank">
+                  
+                    <i class="fa fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="http://weibo.com/u/2109551834?is_all=1" target="_blank">
+                  
+                    <i class="fa fa-weibo"></i>
+                  
+                  Weibo
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="https://www.douban.com/people/zouzls/" target="_blank">
+                  
+                    <i class="fa fa-globe"></i>
+                  
+                  douban
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="https://www.zhihu.com/people/chen-gong-shuai" target="_blank">
+                  
+                    <i class="fa fa-globe"></i>
+                  
+                  zhihu
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        <div class="links-of-blogroll motion-element">
+          
+            <div class="links-of-blogroll-title">Links</div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://bodycoder101.github.io/" target="_blank">阿立</a>
+                </li>
+              
+            </ul>
+          
+        </div>
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#背景"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#安装"><span class="nav-number">2.</span> <span class="nav-text">安装</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#环境要求（非常重要！）"><span class="nav-number">2.1.</span> <span class="nav-text">环境要求（非常重要！）</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#下载-amp-安装"><span class="nav-number">2.2.</span> <span class="nav-text">下载&安装</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#启动"><span class="nav-number">3.</span> <span class="nav-text">启动</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#关于「虚拟化未开启」错误"><span class="nav-number">3.1.</span> <span class="nav-text">关于「虚拟化未开启」错误</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#关于「Unable-…Exit-1」错误"><span class="nav-number">3.2.</span> <span class="nav-text">关于「Unable …Exit 1」错误</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#关于「Not-enough-memory」错误"><span class="nav-number">3.3.</span> <span class="nav-text">关于「Not enough memory」错误</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Demo演示"><span class="nav-number">4.</span> <span class="nav-text">Demo演示</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#hello-world"><span class="nav-number">4.1.</span> <span class="nav-text">hello-world</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#webserver-nginx"><span class="nav-number">4.2.</span> <span class="nav-text">webserver nginx</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Hyper-V管理器"><span class="nav-number">5.</span> <span class="nav-text">Hyper-V管理器</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考资料"><span class="nav-number">6.</span> <span class="nav-text">参考资料</span></a></li></ol></div>
+            
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Gs Chen</span>
+</div>
+
+<div class="powered-by">
+  Powered by <a class="theme-link" href="http://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+  &nbsp&nbsp&nbsp&nbsp|&nbsp&nbsp&nbsp&nbsp<span id="busuanzi_container_site_pv">您是本站第 <span id="busuanzi_value_site_uv"></span>位访客</span>
+</div>
+<script async src="//dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+
+  
+
+
+
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=0.5.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=0.5.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=0.5.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=0.5.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=0.5.0"></script>
+
+
+
+  
+
+  
+    
+  
+
+  <script type="text/javascript">
+    var duoshuoQuery = {short_name:"zouzls"};
+    (function() {
+      var ds = document.createElement('script');
+      ds.type = 'text/javascript';ds.async = true;
+      ds.id = 'duoshuo-script';
+      ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '/js/embed.js';
+      ds.charset = 'UTF-8';
+      (document.getElementsByTagName('head')[0]
+      || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+  </script>
+
+  
+
+
+
+
+
+  
+  
+  
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("EunLkIm0xOFA4ygpTWAXwVKo-gzGzoHsz", "Bj4JrGlyqyFuK27yOwt8eDw8");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+</body>
+</html>

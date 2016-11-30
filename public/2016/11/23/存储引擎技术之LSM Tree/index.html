@@ -1,0 +1,855 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css"/>
+
+
+
+
+  <link href="//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=0.5.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="存储引擎,LSM," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="Gs Chen's blog" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favorite.png?v=0.5.0" />
+
+
+
+
+
+
+<meta name="description" content="一直觉得数据库内部的实现是个黑匣子，总感觉很神秘，借着前段时间「海量存储」这门课程课堂报告的机会，读了一些Paper，虽然没能全部仔细读完，但是从每篇Paper的Abstract里面还是能窥见当前领域的近来的一些学术动态，很多东西没能记住，但是，印象唯独深刻的是，几乎大部分paper都在讨论：如何使得存储系统的I/O性能更快更有效率，如何使得同样的物理存储能够存储更多的数据内容？">
+<meta property="og:type" content="article">
+<meta property="og:title" content="存储引擎技术之LSM Tree">
+<meta property="og:url" content="https://zouzls.github.io/2016/11/23/存储引擎技术之LSM Tree/index.html">
+<meta property="og:site_name" content="Gs Chen's blog">
+<meta property="og:description" content="一直觉得数据库内部的实现是个黑匣子，总感觉很神秘，借着前段时间「海量存储」这门课程课堂报告的机会，读了一些Paper，虽然没能全部仔细读完，但是从每篇Paper的Abstract里面还是能窥见当前领域的近来的一些学术动态，很多东西没能记住，但是，印象唯独深刻的是，几乎大部分paper都在讨论：如何使得存储系统的I/O性能更快更有效率，如何使得同样的物理存储能够存储更多的数据内容？">
+<meta property="og:image" content="https://cloud.githubusercontent.com/assets/3054411/19015433/dbc1b240-8836-11e6-88e4-67d6b23a3d24.png">
+<meta property="og:image" content="https://cloud.githubusercontent.com/assets/3054411/19015445/fd244ab0-8836-11e6-961b-6404474941d2.png">
+<meta property="og:updated_time" content="2016-11-23T13:12:13.329Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="存储引擎技术之LSM Tree">
+<meta name="twitter:description" content="一直觉得数据库内部的实现是个黑匣子，总感觉很神秘，借着前段时间「海量存储」这门课程课堂报告的机会，读了一些Paper，虽然没能全部仔细读完，但是从每篇Paper的Abstract里面还是能窥见当前领域的近来的一些学术动态，很多东西没能记住，但是，印象唯独深刻的是，几乎大部分paper都在讨论：如何使得存储系统的I/O性能更快更有效率，如何使得同样的物理存储能够存储更多的数据内容？">
+<meta name="twitter:image" content="https://cloud.githubusercontent.com/assets/3054411/19015433/dbc1b240-8836-11e6-88e4-67d6b23a3d24.png">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: undefined,
+      author: 'Author'
+    }
+  };
+</script>
+
+  <title> 存储引擎技术之LSM Tree | Gs Chen's blog </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?44cb51503f54763b661c4ae7590d184f";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Gs Chen's blog</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle"></p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-home fa-fw"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-th fa-fw"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-archive fa-fw"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-tags fa-fw"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-user fa-fw"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                存储引擎技术之LSM Tree
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">Posted on</span>
+            <time itemprop="dateCreated" datetime="2016-11-23T15:56:27+08:00" content="2016-11-23">
+              2016-11-23
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/Storage/" itemprop="url" rel="index">
+                    <span itemprop="name">Storage</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2016/11/23/存储引擎技术之LSM Tree/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/11/23/存储引擎技术之LSM Tree/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+             <span id="/2016/11/23/存储引擎技术之LSM Tree/" class="leancloud_visitors" data-flag-title="存储引擎技术之LSM Tree">
+               &nbsp; | &nbsp;
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               <span class="post-meta-item-text">visitors </span>
+               <span class="leancloud-visitors-count"></span>
+              </span>
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>一直觉得数据库内部的实现是个黑匣子，总感觉很神秘，借着前段时间「海量存储」这门课程课堂报告的机会，读了一些Paper，虽然没能全部仔细读完，但是从每篇Paper的Abstract里面还是能窥见当前领域的近来的一些学术动态，很多东西没能记住，但是，印象唯独深刻的是，几乎大部分paper都在讨论：如何使得存储系统的I/O性能更快更有效率，如何使得同样的物理存储能够存储更多的数据内容？<br><a id="more"></a></p>
+<h3 id="前话"><a href="#前话" class="headerlink" title="前话"></a>前话</h3><p>在这一点上，其实是让我开始觉得计算机领域无非就是「存储+计算」，从冯-诺依曼时代就是如此。最后我选择了<a href="https://www.usenix.org/node/170855" target="_blank" rel="external">Spanner</a>这篇论文作为了自己的课程报告，原因是它的Abstract太吸引我了。</p>
+<blockquote>
+<p>Spanner is Google’s scalable, multi-version, globally distributed, and synchronously-replicated database. <strong>It is the first system to distribute data at global scale and support externally-consistent distributed transactions. </strong></p>
+</blockquote>
+<p>虽然当时是对里面很对的术语multi-version、synchronously-replicated、externally-consistent、 distributed transactions不太清楚，出于对「分布式数据库」中分布式和数据库两个领域的好奇心，还是读下去了，当然现在很多专业术语现在还是并不能完全透彻明白，但是已经open in my mind，对于数据库里面核心的概念「事务」、「并发控制」的理解又加深了一层。这里并不打算讨论spanner相关内容，感兴趣的同学可以自己了解。</p>
+<p>随着对Mysql数据库了解加深，知道Mysql的存储引擎主要是Innodb和MyISAM，前者一般是默认存储引擎，主要是B+Tree的数据结构来组织数据。<br>知道这一点的时候是我第一次能将之前学习的「数据结构」和具体应用领域结合起来，当时感觉是兴奋的，不再觉得学习这些有什么用。<br>我发现很多知识，当第一次出现在你的眼前的时候，往往不会引起你的注意，也根本引起不了你的好奇心，但是接二连三出现在视线时，探索的欲望就来了，比如LSM Tree。本文以LevelDB为例介绍LSM在存储引擎中的实现。</p>
+<h3 id="LSM的背景"><a href="#LSM的背景" class="headerlink" title="LSM的背景"></a>LSM的背景</h3><p>LSM Tree的全名叫做Log Structured-Merge Tree。<br>LSM是当前被用在许多产品的文件结构策略：HBase, Cassandra, LevelDB, SQLite,甚至在mangodb3.0中也带了一个可选的LSM引擎（Wired Tiger 实现的）。<br>简单的说，LSM被设计来提供比传统的B+树或者ISAM更好的写操作吞吐量，通过消去随机的本地更新操作来达到这个目标。</p>
+<p>那么为什么这是一个好的方法呢？这个问题的本质还是磁盘随机操作慢，顺序读写快的老问题。这二种操作存在巨大的差距，无论是磁盘还是SSD。<br>想象一下在「操作系统」里面关于磁盘寻址就能明白，随机读写的效率是非常低的，因为要涉及到频繁的磁道寻址。</p>
+<h3 id="LevelDB中LSM引擎实现"><a href="#LevelDB中LSM引擎实现" class="headerlink" title="LevelDB中LSM引擎实现"></a>LevelDB中LSM引擎实现</h3><h4 id="LSM的基本思想"><a href="#LSM的基本思想" class="headerlink" title="LSM的基本思想"></a>LSM的基本思想</h4><p>lsm tree 是针对写入速度瓶颈问题而提出的. mysql 这种数据库的存储引擎使用了 B+ 树来持久化数据, B+ 树是一个索引树, 可以说是同时考虑了读写均衡, 其结构上对树高进行了优化, 搜索耗时相比 AVL 树降下来. 然而问题依然是前面我们谈到的 “对一个随机读优化的排序结构执行随机写是有很大开销的”, 所以对那些需要高频写操作的系统来讲, B+ 树作为存储结构可能并不合适.<br>这时 lsm tree 可能是个更好的选择, 它是一种类似日志的数据结构, 将随机写变为顺序写, 核心思想是:</p>
+<ul>
+<li>对变更进行批量 &amp; 延时处理</li>
+<li>通过归并排序将更新迁移到硬盘上</li>
+</ul>
+<p>自从上世纪某年代一篇关于日志结构文件系统的论文发表之后, 有人基于这个想法提出了解决写瓶颈的问题: 使用顺序写(追加)替代随机写. 为什么要变为顺序写呢? 因为顺序写不需要多次寻址, 速度能达到硬盘理论传输速度, 而随机写则受限于硬盘寻址速度.<br>leveldb 在持久化上借鉴了 lsm tree 的设计. 具体实现就是 memtable + sstable.</p>
+<h4 id="结构规划"><a href="#结构规划" class="headerlink" title="结构规划"></a>结构规划</h4><p><img src="https://cloud.githubusercontent.com/assets/3054411/19015433/dbc1b240-8836-11e6-88e4-67d6b23a3d24.png" alt=""><br>根据此图先初步说一下它的读写流程:</p>
+<ul>
+<li>write: 写入 log 文件一条操作(数据更新)记录, 再往 memtable 里写入 k-v 对.</li>
+<li>read: 读 memtable (没找到)→ 读 immutable memtable (没找到)→ 读 sstable (没找到)→ 空</li>
+</ul>
+<h4 id="memtable"><a href="#memtable" class="headerlink" title="memtable"></a>memtable</h4><p>memtable 是个内存数据结构, 也是读写操作的入口.作为一个存储引擎, 读无非就是读若干个 key, 然后返回对应的 value; 而写就是存下这些 key-value 对.<br>所以 memtable 中存的每条数据也都是一个键值对.<br>关键点是 memtable 中的数据是按 key 的字母表顺序排序的.<br>然而对一个具备随机读能力的排序结构执行插入操作往往是有开销的, 通常写瓶颈也都是集中在这里. 但是也有很多数据结构提供了加速随机写, 比如链表, AVL 树, B 树, skiplist. memtable 的核心结构就是用了跳表.</p>
+<p>结构简单, 概率上近似 O(log N) 读写复杂度的跳表在很多存储系统里得到应用, 比如 elasticsearch 的高速搜索就是基于跳表,位图以及倒排索引实现的. memtable 采用这种结构初步实现快速读写.</p>
+<p>接下来, 既然是存储引擎, 那么肯定能持久化数据, 而 leveldb 核心技术就是围绕持久化过程而构建的.</p>
+<h4 id="sstable"><a href="#sstable" class="headerlink" title="sstable"></a>sstable</h4><p>sstable 全名 sort-string table, bigtable 使用的存储技术. 顾名思义, sstable 中的数据都是有序的.<br>除了日志之外, leveldb 的数据统统存储在 sstable 中. sstable主要以block来区分，每个sstable主要包括data block（若干）、index block、footer ，逻辑视图如下所示。<br><img src="https://cloud.githubusercontent.com/assets/3054411/19015445/fd244ab0-8836-11e6-961b-6404474941d2.png" alt=""><br>下面分别介绍不同种类的block作用：</p>
+<ul>
+<li>data block<br>存储的是所有的data（k-v）。更具体来说, 是 data 域的 record 段存储的. record 里的 k-v 对全部按 key 有序排列。</li>
+<li>index block<br>index block 中的每条记录会对某个 data block 建立索引.</li>
+<li>footer<br>footer 是整个 sstable 的末尾 block, 记录了 indexblock 的起始偏移量和大小, 很容易看出其存在意义就是为了方便读取 index block.</li>
+</ul>
+<h4 id="sstable与lsm-tree之间的关系"><a href="#sstable与lsm-tree之间的关系" class="headerlink" title="sstable与lsm tree之间的关系"></a>sstable与lsm tree之间的关系</h4><p>leveldb 将 sstable 划分为了不同层次(level). level i+1 层的 sstables 由 level i 层的 sstables merge 得来. 而最上层称为 level 0.</p>
+<p>那么第 0 层的 sstables 是怎么来的呢?</p>
+<p>memtable + sstable = lsm tree</p>
+<ul>
+<li>memtable → immutable memtable (内存中)</li>
+<li>immutable memtable → (level 0) sstable (内存 → 外存)</li>
+</ul>
+<p>还记得最开始提到的 memtable? 那个读写入口数据结构. leveldb 给了他一个阈值, 但凡 memtable 里的数据大小达到了阈值, 后台任务就将 memtable 标记为只读, 也就是变成了 immutable memtable.<br>然后创建一个新的 memtable 用于接下来的读写.</p>
+<p>immutable memtable 经过一段时间会被迁移到硬盘上, 成为 sstable, 这一过程称之为 compaction.<br>因为 memtable 的结构是有序的, 因此 sstable 也是有序存储的.</p>
+<h4 id="Compaction"><a href="#Compaction" class="headerlink" title="Compaction"></a>Compaction</h4><p>compaction 是执行 lsm-tree 中 merge 的过程.<br>对于不同应用情况, 分为 minor compaction 和 major compaction.</p>
+<ul>
+<li>minor compaction</li>
+</ul>
+<p>minor compaction 用于内存到外存的迁移过程. 就是简单的遍历跳表, 依次写入新的 sstable record, 最后建立 index block 并完善一些其他的重要元信息. 这也就是从 immutable memtable 到 level 0 sstable 的迁移.</p>
+<ul>
+<li>major compaction</li>
+</ul>
+<p>major compaction 用于 level 之间的迁移.<br>当某个 level 的 sstables 数量超过一个给定的阈值, 就会触发 major compaction.<br>这里有两点差异:</p>
+<p>对 level &gt; 0 的 sstables, 选择其中一个 sstable 与 下一层 sstables 做合并.<br>对 level = 0 的 sstables, 在选择一个 sstable 后, 还需要找出所有与这个 sstable 有 key 范围重叠的 sstables, 最后统统与level 1 的 sstables 做合并.<br>不知之前是否注意到, level 0 的 sstables 可能有键范围的重合. (因为 level 0 的 sstable 是直接由 memtable 变过来的, 而不同的 memtable 之间并没有约束 key 必须独立.)</p>
+<h4 id="merge-策略"><a href="#merge-策略" class="headerlink" title="merge 策略"></a>merge 策略</h4><p>compaction 过程中有提到选择 sstable, 如何选择? 这就看 leveldb 的 merge 策略了:</p>
+<ul>
+<li>level i 按顺序选择.</li>
+<li>level i+1 选择所有与 level i 所选 sstable(s) 有 key 范围重叠的 sstables.</li>
+<li>将这些 sstables 做 K 路归并排序. 对于相同的 key, 只保留最新的(上层 sstable, 同层中新的 sstable).</li>
+<li>清除参与此次 merge 的所有 sstables, 保留新的 sstable.<br>有了前面提到的 compaction 第二个约束和 merge 策略, 间接解释了 level 0 和其他 level 不同的原因: 在level 0 的 compaction后, level 1 产生的 sstable是没有 key范围重叠的, 因此向高层 level 的 compaction 也不会有同一个 level 下 key 范围重叠的 sstable 产生.</li>
+</ul>
+<p>到这里, leveldb 如何实现的 lsm-tree 就比较明朗了: 内存结构中写数据, 每次写只考虑当前 memtable, 不涉及其他结构的更新, 内存数据顺序迁移到外存中, 形成一个日志结构, 这就是 leveldb 顺序写的思路.</p>
+<h3 id="LevelDB的写入和读取效率"><a href="#LevelDB的写入和读取效率" class="headerlink" title="LevelDB的写入和读取效率"></a>LevelDB的写入和读取效率</h3><h4 id="高效的写入效率"><a href="#高效的写入效率" class="headerlink" title="高效的写入效率"></a>高效的写入效率</h4><p>到此为止, leveldb 的写入策略就介绍完了, 这里做个总结:</p>
+<ul>
+<li>内存 + 跳表</li>
+<li>外存中追加, 使用顺序写</li>
+</ul>
+<h4 id="读取效率如何"><a href="#读取效率如何" class="headerlink" title="读取效率如何?"></a>读取效率如何?</h4><p>说完了写, 那么并不具备读优势的 leveldb 读取是怎样设计的呢?</p>
+<p>毕竟凡事很难达到两全, 顺序写的这种结构就注定了丧失读效率(需要多次遍历寻址).<br>然而 leveldb 仍然费尽心思在代码层面而非算法层面做了优化.</p>
+<p>查询过程中优化的顺序如下:</p>
+<ul>
+<li>内存 + skiplist</li>
+<li>sstables B-search (通过 manifest 文件)</li>
+<li>页缓存</li>
+<li>bloom filter(周期性 compaction 做辅助)</li>
+</ul>
+<p>在查询 level 0 sstables 时, 因为不同 sstables 的 key 范围可能有重叠, 所以只能把但凡包含 key 的 sstables 找出来, 排序取最新的 (manifest 文件记录了当前所有sstable 的信息, 包括文件名, 所处 level, key 的范围等等). 因为 sstable 是有序的, 所以在 level &gt; 0 寻找 sstable 这一过程可以应用二分搜索完成. 找到 sstable 后, 读出其 index block, 加载到内存作为 table cache, 再根据索引去查具体的 data block. 而 data block 也包含了一组 k-v, 为了提高定位 key 的效率, leveldb 又引入了布隆过滤器这一数据结构.</p>
+<h3 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h3><p><a href="https://github.com/abbshr/abbshr.github.io/issues/58" target="_blank" rel="external">存储引擎技术架构与内幕</a><br><a href="http://www.open-open.com/lib/view/open1424916275249.html" target="_blank" rel="external">Log Structured Merge Trees(LSM) 原理</a></p>
+<h3 id="最后"><a href="#最后" class="headerlink" title="最后"></a>最后</h3><p>本文对结合LevelDB存储引擎对于LSM Tree原理进行了总结，大部分内容出自于引用，有时间希望能对存储引擎有多更多的了解。</p>
+
+      
+    </div>
+    
+    <div>
+      
+        
+      
+    </div>
+
+    <div>
+      
+        
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/存储引擎/" rel="tag">#存储引擎</a>
+          
+            <a href="/tags/LSM/" rel="tag">#LSM</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/11/17/git常用命令总结/" rel="next" title="git常用命令总结">
+                <i class="fa fa-chevron-left"></i> git常用命令总结
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2016/11/25/通往C-之路/" rel="prev" title="通往C++之路">
+                通往C++之路 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        <!-- JiaThis Button BEGIN -->
+<div class="jiathis_style">
+  <a class="jiathis_button_tsina"></a>
+  <a class="jiathis_button_tqq"></a>
+  <a class="jiathis_button_weixin"></a>
+  <a class="jiathis_button_cqq"></a>
+  <a class="jiathis_button_douban"></a>
+  <a class="jiathis_button_renren"></a>
+  <a class="jiathis_button_qzone"></a>
+  <a class="jiathis_button_kaixin001"></a>
+  <a class="jiathis_button_copy"></a>
+  <a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jiathis_separator jtico jtico_jiathis" target="_blank"></a>
+  <a class="jiathis_counter_style"></a>
+</div>
+<script type="text/javascript" >
+  var jiathis_config={
+    hideMore:false
+  }
+</script>
+<script type="text/javascript" src="http://v3.jiathis.com/code/jia.js" charset="utf-8"></script>
+<!-- JiaThis Button END -->
+
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div class="ds-thread" data-thread-key="2016/11/23/存储引擎技术之LSM Tree/"
+           data-title="存储引擎技术之LSM Tree" data-url="https://zouzls.github.io/2016/11/23/存储引擎技术之LSM Tree/">
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/uploads/avatar.png"
+               alt="Gs Chen" />
+          <p class="site-author-name" itemprop="name">Gs Chen</p>
+          <p class="site-description motion-element" itemprop="description">Widen grain , Highten wall</p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">22</span>
+              <span class="site-state-item-name">posts</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">10</span>
+                <span class="site-state-item-name">categories</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">28</span>
+                <span class="site-state-item-name">tags</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/zouzls" target="_blank">
+                  
+                    <i class="fa fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="http://weibo.com/u/2109551834?is_all=1" target="_blank">
+                  
+                    <i class="fa fa-weibo"></i>
+                  
+                  Weibo
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="https://www.douban.com/people/zouzls/" target="_blank">
+                  
+                    <i class="fa fa-globe"></i>
+                  
+                  douban
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="https://www.zhihu.com/people/chen-gong-shuai" target="_blank">
+                  
+                    <i class="fa fa-globe"></i>
+                  
+                  zhihu
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        <div class="links-of-blogroll motion-element">
+          
+            <div class="links-of-blogroll-title">Links</div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://bodycoder101.github.io/" target="_blank">阿立</a>
+                </li>
+              
+            </ul>
+          
+        </div>
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#前话"><span class="nav-number">1.</span> <span class="nav-text">前话</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#LSM的背景"><span class="nav-number">2.</span> <span class="nav-text">LSM的背景</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#LevelDB中LSM引擎实现"><span class="nav-number">3.</span> <span class="nav-text">LevelDB中LSM引擎实现</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#LSM的基本思想"><span class="nav-number">3.1.</span> <span class="nav-text">LSM的基本思想</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#结构规划"><span class="nav-number">3.2.</span> <span class="nav-text">结构规划</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#memtable"><span class="nav-number">3.3.</span> <span class="nav-text">memtable</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#sstable"><span class="nav-number">3.4.</span> <span class="nav-text">sstable</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#sstable与lsm-tree之间的关系"><span class="nav-number">3.5.</span> <span class="nav-text">sstable与lsm tree之间的关系</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Compaction"><span class="nav-number">3.6.</span> <span class="nav-text">Compaction</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#merge-策略"><span class="nav-number">3.7.</span> <span class="nav-text">merge 策略</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#LevelDB的写入和读取效率"><span class="nav-number">4.</span> <span class="nav-text">LevelDB的写入和读取效率</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#高效的写入效率"><span class="nav-number">4.1.</span> <span class="nav-text">高效的写入效率</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#读取效率如何"><span class="nav-number">4.2.</span> <span class="nav-text">读取效率如何?</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#引用"><span class="nav-number">5.</span> <span class="nav-text">引用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#最后"><span class="nav-number">6.</span> <span class="nav-text">最后</span></a></li></ol></div>
+            
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Gs Chen</span>
+</div>
+
+<div class="powered-by">
+  Powered by <a class="theme-link" href="http://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+  &nbsp&nbsp&nbsp&nbsp|&nbsp&nbsp&nbsp&nbsp<span id="busuanzi_container_site_pv">您是本站第 <span id="busuanzi_value_site_uv"></span>位访客</span>
+</div>
+<script async src="//dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+
+  
+
+
+
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=0.5.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=0.5.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=0.5.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=0.5.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=0.5.0"></script>
+
+
+
+  
+
+  
+    
+  
+
+  <script type="text/javascript">
+    var duoshuoQuery = {short_name:"zouzls"};
+    (function() {
+      var ds = document.createElement('script');
+      ds.type = 'text/javascript';ds.async = true;
+      ds.id = 'duoshuo-script';
+      ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '/js/embed.js';
+      ds.charset = 'UTF-8';
+      (document.getElementsByTagName('head')[0]
+      || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+  </script>
+
+  
+
+
+
+
+
+  
+  
+  
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("EunLkIm0xOFA4ygpTWAXwVKo-gzGzoHsz", "Bj4JrGlyqyFuK27yOwt8eDw8");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+</body>
+</html>

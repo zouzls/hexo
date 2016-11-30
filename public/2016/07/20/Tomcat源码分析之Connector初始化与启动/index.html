@@ -1,0 +1,816 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css"/>
+
+
+
+
+  <link href="//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=0.5.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Tomcat,源码分析,环境搭建," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="Gs Chen's blog" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favorite.png?v=0.5.0" />
+
+
+
+
+
+
+<meta name="description" content="Tomcat主要由两大核心组件，一个是connector,一个是container。connector负责的是底层的网络通信的实现，而container负责的是上层servlet业务的实现。一个应用服务器的性能很大程度上取决于网络通信模块的实现，因此connector对于tomcat而言是重中之重。源码看到Connector的时候，确实看的比较费劲，里面错综复杂的类结构和继承关系，确实头昏脑涨，下">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Tomcat源码分析之Connector初始化与启动">
+<meta property="og:url" content="https://zouzls.github.io/2016/07/20/Tomcat源码分析之Connector初始化与启动/index.html">
+<meta property="og:site_name" content="Gs Chen's blog">
+<meta property="og:description" content="Tomcat主要由两大核心组件，一个是connector,一个是container。connector负责的是底层的网络通信的实现，而container负责的是上层servlet业务的实现。一个应用服务器的性能很大程度上取决于网络通信模块的实现，因此connector对于tomcat而言是重中之重。源码看到Connector的时候，确实看的比较费劲，里面错综复杂的类结构和继承关系，确实头昏脑涨，下">
+<meta property="og:image" content="http://oaewlsdmg.bkt.clouddn.com/image/jpg/1358483637_2091.png">
+<meta property="og:image" content="http://oaewlsdmg.bkt.clouddn.com/blog%2Fimage%2F20150426172846043.png">
+<meta property="og:image" content="http://oaewlsdmg.bkt.clouddn.com/image/jpg/QQ%E5%9B%BE%E7%89%8720160721100955.png">
+<meta property="og:updated_time" content="2016-08-26T10:48:17.551Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Tomcat源码分析之Connector初始化与启动">
+<meta name="twitter:description" content="Tomcat主要由两大核心组件，一个是connector,一个是container。connector负责的是底层的网络通信的实现，而container负责的是上层servlet业务的实现。一个应用服务器的性能很大程度上取决于网络通信模块的实现，因此connector对于tomcat而言是重中之重。源码看到Connector的时候，确实看的比较费劲，里面错综复杂的类结构和继承关系，确实头昏脑涨，下">
+<meta name="twitter:image" content="http://oaewlsdmg.bkt.clouddn.com/image/jpg/1358483637_2091.png">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: undefined,
+      author: 'Author'
+    }
+  };
+</script>
+
+  <title> Tomcat源码分析之Connector初始化与启动 | Gs Chen's blog </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?44cb51503f54763b661c4ae7590d184f";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Gs Chen's blog</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle"></p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-home fa-fw"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-th fa-fw"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-archive fa-fw"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-tags fa-fw"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-user fa-fw"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Tomcat源码分析之Connector初始化与启动
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">Posted on</span>
+            <time itemprop="dateCreated" datetime="2016-07-20T16:06:35+08:00" content="2016-07-20">
+              2016-07-20
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/Tomcat/" itemprop="url" rel="index">
+                    <span itemprop="name">Tomcat</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2016/07/20/Tomcat源码分析之Connector初始化与启动/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/07/20/Tomcat源码分析之Connector初始化与启动/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+             <span id="/2016/07/20/Tomcat源码分析之Connector初始化与启动/" class="leancloud_visitors" data-flag-title="Tomcat源码分析之Connector初始化与启动">
+               &nbsp; | &nbsp;
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               <span class="post-meta-item-text">visitors </span>
+               <span class="leancloud-visitors-count"></span>
+              </span>
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>Tomcat主要由两大核心组件，一个是connector,一个是container。connector负责的是底层的网络通信的实现，而container负责的是上层servlet业务的实现。一个应用服务器的性能很大程度上取决于网络通信模块的实现，因此connector对于tomcat而言是重中之重。源码看到Connector的时候，确实看的比较费劲，里面错综复杂的类结构和继承关系，确实头昏脑涨，下面我尝试用清晰一点的脉络去理解Connector。<br><a id="more"></a></p>
+<h3 id="Connector配置"><a href="#Connector配置" class="headerlink" title="Connector配置"></a>Connector配置</h3><p>在{源码根目录}/conf路径下的server.xml文件中，service内部可以看到Connector的配置：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&lt;Connector port=&quot;8080&quot; protocol=&quot;HTTP/1.1&quot;</span><br><span class="line">           connectionTimeout=&quot;20000&quot;</span><br><span class="line">           redirectPort=&quot;8443&quot; /&gt;</span><br><span class="line">&lt;Connector port=&quot;8009&quot; protocol=&quot;AJP/1.3&quot; redirectPort=&quot;8443&quot; /&gt;</span><br></pre></td></tr></table></figure></p>
+<p>尤其是HTTP/1.1协议的配置，后面在Connector初始化的过程中，我们可以看到它的作用（下面的讨论都是基于HTTP/1.1之上，不再说明）。</p>
+<h3 id="主要类和接口"><a href="#主要类和接口" class="headerlink" title="主要类和接口"></a>主要类和接口</h3><p>下面类会比较常见，而且关系比较错综复杂，提前心中有数比较好，如下：</p>
+<ul>
+<li>Http11Protocol<br>1、继承关系：Http11Protocol - AbstractProtocol - ProtocolHandler。<br>2、Http11Protocol是ProtocolHandler的的最终实现，并且Connector对于请求的真正的处理是由Http11Protocol这个boss搞定的，这个boss负责有三个重要的实例，分别是JIoEndpoint、Http11ConnectionHandler和CoyoteAdapter，他们各司其职。如图：<br><img src="http://oaewlsdmg.bkt.clouddn.com/image/jpg/1358483637_2091.png" alt=""></li>
+<li>JIoEndpoint<br>1、继承关系：JIoEndpoint - AbstractEndpoint<socket>。<br>2、在Http11Protocol的构造函数中被初始化。<br>3、完成端口的绑定，对请求进行监听，并将获取的socket交给Http11ConnectionHandler来process。</socket></li>
+<li>Http11ConnectionHandler<br>1、继承关系：Http11ConnectionHandler - AbstractConnectionHandler -  Handler。<br>2、在Http11Protocol的构造函数中被初始化，并被设置为JIoEndpoint的cHandler。<br>3、作为Http11Protocol的内部类，处理socket任务。</li>
+<li>CoyoteAdapter<br>1、继承关系：CoyoteAdapter - Adapter<br>2、在Connector的init方法中被初始化，并被设置为protocolHandler的adapter。<br>3、作为Connector和Container之间的桥梁，可以理解为有两个作用，一个是将Connector的请求交给Container，同时隔离了两边请求；二个是可以作为拓展。<br><img src="http://oaewlsdmg.bkt.clouddn.com/blog%2Fimage%2F20150426172846043.png" alt=""></li>
+</ul>
+<p>【注】：JIoEndpoint和Http11ConnectionHandler是在Http11Protocol的构造函数中被初始化，代码如下：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">Http11Protocol</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    endpoint = <span class="keyword">new</span> JIoEndpoint();</span><br><span class="line">    cHandler = <span class="keyword">new</span> Http11ConnectionHandler(<span class="keyword">this</span>);</span><br><span class="line">    ((JIoEndpoint) endpoint).setHandler(cHandler);</span><br><span class="line">    setSoLinger(Constants.DEFAULT_CONNECTION_LINGER);</span><br><span class="line">    setSoTimeout(Constants.DEFAULT_CONNECTION_TIMEOUT);</span><br><span class="line">    setTcpNoDelay(Constants.DEFAULT_TCP_NO_DELAY);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>JIoEndpoint设置了Handler为Http11ConnectionHandler，至于后面怎么用，会继续分析。下面分析Connector是如何初始化和启动的。</p>
+<h3 id="Connector初始化"><a href="#Connector初始化" class="headerlink" title="Connector初始化"></a>Connector初始化</h3><h4 id="Connector的构造函数"><a href="#Connector的构造函数" class="headerlink" title="Connector的构造函数"></a>Connector的构造函数</h4><p>构造函数里面主要是搞定Http11Protocol这个超级Handler的实例化，Connector的通信的实际任务就是由该对象一手策划完成，代码如下：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">protected</span> String protocolHandlerClassName =</span><br><span class="line">    <span class="string">"org.apache.coyote.http11.Http11Protocol"</span>;</span><br><span class="line">...</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">Connector</span><span class="params">(String protocol)</span> </span>&#123;</span><br><span class="line">    <span class="comment">//step1 设置协议变量</span></span><br><span class="line">    setProtocol(protocol);</span><br><span class="line">    <span class="comment">// Instantiate protocol handler</span></span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="comment">//step2 根据协议动态加载协议类和实例化该对象</span></span><br><span class="line">        Class&lt;?&gt; clazz = Class.forName(protocolHandlerClassName);</span><br><span class="line">        <span class="keyword">this</span>.protocolHandler = (ProtocolHandler) clazz.newInstance();</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">        log.error(sm.getString(</span><br><span class="line">                <span class="string">"coyoteConnector.protocolHandlerInstantiationFailed"</span>), e);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//setProtocol方法来确定class名称</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setProtocol</span><span class="params">(String protocol)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (<span class="string">"HTTP/1.1"</span>.equals(protocol)) &#123;<span class="comment">//配置文件中已经配置</span></span><br><span class="line">        setProtocolHandlerClassName</span><br><span class="line">            (<span class="string">"org.apache.coyote.http11.Http11Protocol"</span>);</span><br><span class="line">    &#125; </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h4 id="Connector的initInternal方法"><a href="#Connector的initInternal方法" class="headerlink" title="Connector的initInternal方法"></a>Connector的initInternal方法</h4><p>Connector的initInternal()初始化方法被调用主要是设置当前Connector的适配器并且完成Http11Protocol的初始化，如下：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">initInternal</span><span class="params">()</span> <span class="keyword">throws</span> LifecycleException </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="comment">//step1 初始化一个适配器（Connector和Container的桥梁）</span></span><br><span class="line">    adapter = <span class="keyword">new</span> CoyoteAdapter(<span class="keyword">this</span>);</span><br><span class="line">    <span class="comment">//并将adapter设置Handler的适配器</span></span><br><span class="line">    protocolHandler.setAdapter(adapter);</span><br><span class="line"></span><br><span class="line">    ...</span><br><span class="line"></span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="comment">//step2 协议初始化</span></span><br><span class="line">        protocolHandler.init();<span class="comment">//</span></span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> LifecycleException</span><br><span class="line">            (sm.getString</span><br><span class="line">             (<span class="string">"coyoteConnector.protocolHandlerInitializationFailed"</span>), e);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//step3 Initialize mapper listener</span></span><br><span class="line">    mapperListener.init();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>【注】：这里先对CoyoteAdapter做一个简单的解释，Connector监听到底层的请求之后，<br>会中间经过一系列准备工作之后，创建org.apache.coyote.Request和org.apache.coyote.Response（注意Request和Response所属的范围），交给CoyoteAdapter的service(org.apache.coyote.Request req,org.apache.coyote.Response res)方法，在这个方法内部会进行适配，也可以理解为转换，变成org.apache.catalina.connector.Request和org.apache.catalina.connector.Response，然后交给Container处理，service方法的代码可以简单了解如下(部分省略)：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">service</span><span class="params">(org.apache.coyote.Request req,</span><br><span class="line">                    org.apache.coyote.Response res)</span></span><br><span class="line">    <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    Request request = (Request) req.getNote(ADAPTER_NOTES);</span><br><span class="line">    Response response = (Response) res.getNote(ADAPTER_NOTES);</span><br><span class="line">    <span class="keyword">if</span> (request == <span class="keyword">null</span>) &#123;</span><br><span class="line">        ...</span><br><span class="line">        <span class="comment">// Create objects</span></span><br><span class="line">        request = connector.createRequest();</span><br><span class="line">        request.setCoyoteRequest(req);</span><br><span class="line">        response = connector.createResponse();</span><br><span class="line">        response.setCoyoteResponse(res);</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">    ...</span><br><span class="line">    <span class="comment">// Calling the container</span></span><br><span class="line">    connector.getService().getContainer().getPipeline().getFirst().invoke(request, response);<span class="comment">//请求最终交给Container</span></span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h4 id="JIoEndpoint的init方法"><a href="#JIoEndpoint的init方法" class="headerlink" title="JIoEndpoint的init方法"></a>JIoEndpoint的init方法</h4><p>protocolHandler.init()方法会调用Http11Protocol祖父类（AbstractProtocol）的init方法，然后接着调用JIoEndpoint抽象父类（AbstractEndpoint）的init，最终是由IoEndpoint的band方法完成端口的绑定。我们可以看到AbstractEndpoint的init()方法，如下：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="keyword">void</span> <span class="title">bind</span><span class="params">()</span> <span class="keyword">throws</span> Exception</span>;<span class="comment">//定义了抽象的绑定操作</span></span><br><span class="line">...</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">init</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    testServerCipherSuitesOrderSupport();</span><br><span class="line">    <span class="keyword">if</span> (bindOnInit) &#123;</span><br><span class="line">        bind();</span><br><span class="line">        bindState = BindState.BOUND_ON_INIT;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>如果在eclipse中打开bind()方法会看到三个不同类的实现，毫无疑问应该是第二个实现JIoEndpoint，如下图：<br><img src="http://oaewlsdmg.bkt.clouddn.com/image/jpg/QQ%E5%9B%BE%E7%89%8720160721100955.png" alt=""><br>在这个过程中我们可以知道设计者的心思，设计者在AbstractProtocol和AbstractEndpoint中分别将各种共用的关键的方法和变量进行了定义，这样体现了抽象类的作用。<br>在JIoEndpoint中bind方法代码实现如下：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">bind</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Initialize thread count defaults for acceptor</span></span><br><span class="line">    <span class="keyword">if</span> (acceptorThreadCount == <span class="number">0</span>) &#123;</span><br><span class="line">        acceptorThreadCount = <span class="number">1</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// Initialize maxConnections</span></span><br><span class="line">    <span class="keyword">if</span> (getMaxConnections() == <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="comment">// User hasn't set a value - use the default</span></span><br><span class="line">        setMaxConnections(getMaxThreadsExecutor(<span class="keyword">true</span>));</span><br><span class="line">    &#125;</span><br><span class="line">    ...</span><br><span class="line">    serverSocketFactory =</span><br><span class="line">                handler.getSslImplementation().getServerSocketFactory(<span class="keyword">this</span>);</span><br><span class="line">    serverSocket = serverSocketFactory.createSocket(getPort(),</span><br><span class="line">                        getBacklog());  </span><br><span class="line">    ...</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h3 id="Connector启动"><a href="#Connector启动" class="headerlink" title="Connector启动"></a>Connector启动</h3><h4 id="Connector的startInternal方法"><a href="#Connector的startInternal方法" class="headerlink" title="Connector的startInternal方法"></a>Connector的startInternal方法</h4><p>这个过程跟Connector的初始化过程前半部分相似，代码实现如下：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">startInternal</span><span class="params">()</span> <span class="keyword">throws</span> LifecycleException </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        protocolHandler.start();</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    mapperListener.start();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>毫无疑问是调用protocolHandler的start方法，由Http11Protocol的祖父类AbstractProtocol的start方法，代码如下：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">start</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        endpoint.start();</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception ex) &#123;</span><br><span class="line">        ....</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>父类抽象的实现了start方法，接下来调用endpoint.start()，目前为止与上文中的endpoint.init()方法如出一辙，如下AbstractEndpoint中的start方法：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">public final void start() throws Exception &#123;</span><br><span class="line">    if (bindState == BindState.UNBOUND) &#123;</span><br><span class="line">        bind();</span><br><span class="line">        bindState = BindState.BOUND_ON_START;</span><br><span class="line">    &#125;</span><br><span class="line">    startInternal();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h4 id="JIoEndpoint中的startInternal方法"><a href="#JIoEndpoint中的startInternal方法" class="headerlink" title="JIoEndpoint中的startInternal方法"></a>JIoEndpoint中的startInternal方法</h4><p>同样startInternal()也有三个实现，进入JIoEndpoint中，则有：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">startInternal</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (!running) &#123;</span><br><span class="line">        running = <span class="keyword">true</span>;</span><br><span class="line">        paused = <span class="keyword">false</span>;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// Create worker collection</span></span><br><span class="line">        <span class="keyword">if</span> (getExecutor() == <span class="keyword">null</span>) &#123;</span><br><span class="line">            createExecutor();</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        initializeConnectionLatch();</span><br><span class="line"></span><br><span class="line">        startAcceptorThreads();<span class="comment">//这个就是重头戏啦</span></span><br><span class="line"></span><br><span class="line">        <span class="comment">// Start async timeout thread</span></span><br><span class="line">        Thread timeoutThread = <span class="keyword">new</span> Thread(<span class="keyword">new</span> AsyncTimeout(),</span><br><span class="line">                getName() + <span class="string">"-AsyncTimeout"</span>);</span><br><span class="line">        timeoutThread.setPriority(threadPriority);</span><br><span class="line">        timeoutThread.setDaemon(<span class="keyword">true</span>);</span><br><span class="line">        timeoutThread.start();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h4 id="JIoEndpoint的startAcceptorThreads方法"><a href="#JIoEndpoint的startAcceptorThreads方法" class="headerlink" title="JIoEndpoint的startAcceptorThreads方法"></a>JIoEndpoint的startAcceptorThreads方法</h4><p>中间的startAcceptorThreads()就是开启接受请求线程咯，我们进去一睹庐山真面看看，进去之后会进入AbstractEndpoint中，又来到这个类了，代码如下：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">startAcceptorThreads</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">int</span> count = getAcceptorThreadCount();</span><br><span class="line">    acceptors = <span class="keyword">new</span> Acceptor[count];<span class="comment">//此处的Acceptor是个接口</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; count; i++) &#123;</span><br><span class="line">        acceptors[i] = createAcceptor();<span class="comment">//此处根据协议不同创建不同的</span></span><br><span class="line">        String threadName = getName() + <span class="string">"-Acceptor-"</span> + i;</span><br><span class="line">        acceptors[i].setThreadName(threadName);</span><br><span class="line">        Thread t = <span class="keyword">new</span> Thread(acceptors[i], threadName);</span><br><span class="line">        t.setPriority(getAcceptorThreadPriority());</span><br><span class="line">        t.setDaemon(getDaemon());</span><br><span class="line">        t.start();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line">...</span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">abstract</span> Acceptor <span class="title">createAcceptor</span><span class="params">()</span></span>;<span class="comment">//AbstractEndpoint已经定义好了这个抽象方法</span></span><br></pre></td></tr></table></figure></p>
+<p>new Acceptor[count]中的Acceptor其实就是AbstractEndpoint的一个抽象的内部类，看看它大概是什么样的吧：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">Acceptor</span> <span class="keyword">implements</span> <span class="title">Runnable</span> </span>&#123;</span><br><span class="line">    ....</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>一看就是个线程对不对，但是只是定义了一些变量，没有定义run() 方法，所以我们要看createAcceptor()中是如何实现的，进入由JIoEndpoint中，如下：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">protected</span> AbstractEndpoint.<span class="function">Acceptor <span class="title">createAcceptor</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> Acceptor();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>尼玛搞了半天，以为快水落石出了，结果你只是又扔出来一个Acceptor，好吧看看那么这个有何不同，进去看看：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">protected</span> <span class="class"><span class="keyword">class</span> <span class="title">Acceptor</span> <span class="keyword">extends</span> <span class="title">AbstractEndpoint</span>.<span class="title">Acceptor</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="comment">// Loop until we receive a shutdown command</span></span><br><span class="line">        <span class="keyword">while</span> (running) &#123;</span><br><span class="line">            ...</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                ...</span><br><span class="line">                Socket socket = <span class="keyword">null</span>;</span><br><span class="line">                socket = serverSocketFactory.acceptSocket(serverSocket);<span class="comment">//获取连接</span></span><br><span class="line"></span><br><span class="line">                <span class="comment">// Configure the socket</span></span><br><span class="line">                <span class="keyword">if</span> (running &amp;&amp; !paused &amp;&amp; setSocketOptions(socket)) &#123;</span><br><span class="line">                    <span class="comment">// Hand this socket off to an appropriate processor</span></span><br><span class="line">                    <span class="keyword">if</span> (!processSocket(socket)) &#123;<span class="comment">//关键处理</span></span><br><span class="line">                        ...</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125; </span><br><span class="line">            &#125; </span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>从processSocket(socket)中进去看到socket被包装了起来，交给了SocketProcessor，该类是JIoEndpoint的内部类，作为专门处理socket的线程。</p>
+<h4 id="Http11ConnectionHandler的process方法"><a href="#Http11ConnectionHandler的process方法" class="headerlink" title="Http11ConnectionHandler的process方法"></a>Http11ConnectionHandler的process方法</h4><p>接下来就可以看到真正处理socket的东西了，最前面前面我们提到过，JIoEndpoint和Http11ConnectionHandler是在Http11Protocol的构造函数中被初始化，JIoEndpoint同时设置了Http11ConnectionHandler作为Handler。所以，回头来看，我们知道JIoEndpoint在接收到socket请求之后，实际是经过一定的准备工作，然后将socket交给了Http11ConnectionHandler这个去处理了。代码如下：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span><br><span class="line"> * Handling of accepted sockets.</span><br><span class="line"> */</span></span><br><span class="line"><span class="keyword">protected</span> Handler handler = <span class="keyword">null</span>;</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setHandler</span><span class="params">(Handler handler )</span> </span>&#123; <span class="keyword">this</span>.handler = handler; &#125;</span><br><span class="line">...</span><br><span class="line"><span class="keyword">protected</span> <span class="class"><span class="keyword">class</span> <span class="title">SocketProcessor</span> <span class="keyword">implements</span> <span class="title">Runnable</span> </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> ((state != SocketState.CLOSED)) &#123;</span><br><span class="line">            <span class="keyword">if</span> (status == <span class="keyword">null</span>) &#123;</span><br><span class="line">                state = handler.process(socket, SocketStatus.OPEN_READ);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                state = handler.process(socket,status);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>由源码可知，通过Http11ConnectionHandler的父类AbstractConnectionHandler定义的process方法（设计者可能是为了方便拓展），然后又用Http11Processor的父类的AbstractHttp11Processor的process方法，才调用了埋伏已久的adapter.service(req,resp)方法，等这一刻等的有点久了。代码如下：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> SocketState <span class="title">process</span><span class="params">(SocketWrapper&lt;S&gt; socketWrapper)</span></span><br><span class="line">       <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">       </span><br><span class="line">       adapter.service(request, response);</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure></p>
+<p>至此，Connector的初始化和启动分析的差不多了，并将这个过程中创建的Request和Response交给了adapter这个桥梁，至于service方法内部做了哪些工作，在前面有分析，如果看到这儿，再回头看看文章开始的那几个类，大概整个流程差不多了然于胸了。</p>
+<h3 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h3><p><a href="http://wely.iteye.com/blog/2295171" target="_blank" rel="external">tomcat源码分析-Connector初始化与启动</a><br><a href="http://blog.csdn.net/liweisnake/article/details/8513295" target="_blank" rel="external">tomcat6中的请求流程 - CSDN.NET</a><br><a href="http://www.it610.com/article/2301453.htm" target="_blank" rel="external">tomcat connector学习笔记 </a><br><a href="http://blog.csdn.net/wangyangzhizhou/article/details/45290061" target="_blank" rel="external">连接器与容器的桥梁——CoyoteAdapter</a></p>
+<p>-EOF-</p>
+
+      
+    </div>
+    
+    <div>
+      
+        
+      
+    </div>
+
+    <div>
+      
+        
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Tomcat/" rel="tag">#Tomcat</a>
+          
+            <a href="/tags/源码分析/" rel="tag">#源码分析</a>
+          
+            <a href="/tags/环境搭建/" rel="tag">#环境搭建</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/07/05/Tomcat源码分析之生命周期管理/" rel="next" title="Tomcat源码分析之生命周期管理">
+                <i class="fa fa-chevron-left"></i> Tomcat源码分析之生命周期管理
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2016/07/27/Docker安装与启动/" rel="prev" title="Docker安装与启动">
+                Docker安装与启动 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        <!-- JiaThis Button BEGIN -->
+<div class="jiathis_style">
+  <a class="jiathis_button_tsina"></a>
+  <a class="jiathis_button_tqq"></a>
+  <a class="jiathis_button_weixin"></a>
+  <a class="jiathis_button_cqq"></a>
+  <a class="jiathis_button_douban"></a>
+  <a class="jiathis_button_renren"></a>
+  <a class="jiathis_button_qzone"></a>
+  <a class="jiathis_button_kaixin001"></a>
+  <a class="jiathis_button_copy"></a>
+  <a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jiathis_separator jtico jtico_jiathis" target="_blank"></a>
+  <a class="jiathis_counter_style"></a>
+</div>
+<script type="text/javascript" >
+  var jiathis_config={
+    hideMore:false
+  }
+</script>
+<script type="text/javascript" src="http://v3.jiathis.com/code/jia.js" charset="utf-8"></script>
+<!-- JiaThis Button END -->
+
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div class="ds-thread" data-thread-key="2016/07/20/Tomcat源码分析之Connector初始化与启动/"
+           data-title="Tomcat源码分析之Connector初始化与启动" data-url="https://zouzls.github.io/2016/07/20/Tomcat源码分析之Connector初始化与启动/">
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/uploads/avatar.png"
+               alt="Gs Chen" />
+          <p class="site-author-name" itemprop="name">Gs Chen</p>
+          <p class="site-description motion-element" itemprop="description">Widen grain , Highten wall</p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">22</span>
+              <span class="site-state-item-name">posts</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">10</span>
+                <span class="site-state-item-name">categories</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">28</span>
+                <span class="site-state-item-name">tags</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/zouzls" target="_blank">
+                  
+                    <i class="fa fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="http://weibo.com/u/2109551834?is_all=1" target="_blank">
+                  
+                    <i class="fa fa-weibo"></i>
+                  
+                  Weibo
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="https://www.douban.com/people/zouzls/" target="_blank">
+                  
+                    <i class="fa fa-globe"></i>
+                  
+                  douban
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="https://www.zhihu.com/people/chen-gong-shuai" target="_blank">
+                  
+                    <i class="fa fa-globe"></i>
+                  
+                  zhihu
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        <div class="links-of-blogroll motion-element">
+          
+            <div class="links-of-blogroll-title">Links</div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://bodycoder101.github.io/" target="_blank">阿立</a>
+                </li>
+              
+            </ul>
+          
+        </div>
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#Connector配置"><span class="nav-number">1.</span> <span class="nav-text">Connector配置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#主要类和接口"><span class="nav-number">2.</span> <span class="nav-text">主要类和接口</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Connector初始化"><span class="nav-number">3.</span> <span class="nav-text">Connector初始化</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Connector的构造函数"><span class="nav-number">3.1.</span> <span class="nav-text">Connector的构造函数</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Connector的initInternal方法"><span class="nav-number">3.2.</span> <span class="nav-text">Connector的initInternal方法</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#JIoEndpoint的init方法"><span class="nav-number">3.3.</span> <span class="nav-text">JIoEndpoint的init方法</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Connector启动"><span class="nav-number">4.</span> <span class="nav-text">Connector启动</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Connector的startInternal方法"><span class="nav-number">4.1.</span> <span class="nav-text">Connector的startInternal方法</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#JIoEndpoint中的startInternal方法"><span class="nav-number">4.2.</span> <span class="nav-text">JIoEndpoint中的startInternal方法</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#JIoEndpoint的startAcceptorThreads方法"><span class="nav-number">4.3.</span> <span class="nav-text">JIoEndpoint的startAcceptorThreads方法</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Http11ConnectionHandler的process方法"><span class="nav-number">4.4.</span> <span class="nav-text">Http11ConnectionHandler的process方法</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考资料"><span class="nav-number">5.</span> <span class="nav-text">参考资料</span></a></li></ol></div>
+            
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Gs Chen</span>
+</div>
+
+<div class="powered-by">
+  Powered by <a class="theme-link" href="http://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+  &nbsp&nbsp&nbsp&nbsp|&nbsp&nbsp&nbsp&nbsp<span id="busuanzi_container_site_pv">您是本站第 <span id="busuanzi_value_site_uv"></span>位访客</span>
+</div>
+<script async src="//dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+
+  
+
+
+
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=0.5.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=0.5.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=0.5.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=0.5.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=0.5.0"></script>
+
+
+
+  
+
+  
+    
+  
+
+  <script type="text/javascript">
+    var duoshuoQuery = {short_name:"zouzls"};
+    (function() {
+      var ds = document.createElement('script');
+      ds.type = 'text/javascript';ds.async = true;
+      ds.id = 'duoshuo-script';
+      ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '/js/embed.js';
+      ds.charset = 'UTF-8';
+      (document.getElementsByTagName('head')[0]
+      || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+  </script>
+
+  
+
+
+
+
+
+  
+  
+  
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("EunLkIm0xOFA4ygpTWAXwVKo-gzGzoHsz", "Bj4JrGlyqyFuK27yOwt8eDw8");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+</body>
+</html>

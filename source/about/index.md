@@ -2,44 +2,25 @@
 title: about
 date: 2016-04-09 22:42:18
 ---
+### Name
+En：Gs Chen | Cn：陈恭帅
 
-Name
-----
+### About Me
+- Major in Computer Science .
+- A master student in WHU.
+- Be interested in Java , Distributed System ,etc. 
 
-Cn：陈恭帅 | En：william
+### Like
 
-I Am
-----
+- Reading books , especially History , Philosophy and Technology .
+- Programing to realize my own idea .
+- Handwriting ,Go , Movies ,Badminton and Travelling ,etc.
 
-WHU在读计算机硕士一枚，入江湖未深，技艺薄浅。
-曾拜入Java门下，亦习fontEnd。
-喜结诸豪，仰科技之潇洒，慕江湖之风流。
-今期专于后端，练算法，求分布式之精髓。
+### Keywords
+Positive; Responsible; Goal-directed; Indomitable; Coder;
 
-Contact
--------
-
-微博：[zouzls][1]
-豆瓣：[zouzls][2]
-知乎：[少荃][3]
-Github：[zouzls][4]
-StackOverflow：[william][5]
-Email：[zouzls@foxmail.com][6]
-
-Like
-----
-
-看书：文史哲与技术
-看电影：文艺与科幻
-棋：围棋
-其他：旅游，陪伴家人
-
-
-
-
-  [1]: http://weibo.com/2109551834/profile?topnav=1&wvr=6&is_all=1
-  [2]: https://www.douban.com/people/zouzls/
-  [3]: https://www.zhihu.com/people/chen-gong-shuai
-  [4]: https://github.com/zouzls
-  [5]: http://stackoverflow.com/users/4283997/william
-  [6]: mailto:me@foxmail.com
+### Contact
+- Weibo：[zouzls](http://weibo.com/2109551834/profile?topnav=1&wvr=6&is_all=1)
+- Douban：[zouzls](https://www.douban.com/people/zouzls/)
+- Github：[zouzls](https://github.com/zouzls)
+- Email：[zouzls@foxmail.com](mailto:zouzls@foxmail.com)

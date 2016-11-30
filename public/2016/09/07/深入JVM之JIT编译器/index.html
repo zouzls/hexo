@@ -1,0 +1,823 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css"/>
+
+
+
+
+  <link href="//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=0.5.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="JVM,JIT," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="Gs Chen's blog" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favorite.png?v=0.5.0" />
+
+
+
+
+
+
+<meta name="description" content="上篇是分析了一下前段编译器，主要过程完成从java代码到字节码的转变，它的改进顶多是提高程序的编码速度和效率。本篇尝试探索JIT编译器，它能够完成从字节码到本地机器码的转变，从而真正的影响程序的运行效率。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="深入JVM之JIT编译器">
+<meta property="og:url" content="https://zouzls.github.io/2016/09/07/深入JVM之JIT编译器/index.html">
+<meta property="og:site_name" content="Gs Chen's blog">
+<meta property="og:description" content="上篇是分析了一下前段编译器，主要过程完成从java代码到字节码的转变，它的改进顶多是提高程序的编码速度和效率。本篇尝试探索JIT编译器，它能够完成从字节码到本地机器码的转变，从而真正的影响程序的运行效率。">
+<meta property="og:image" content="http://img.blog.csdn.net/20151105003122855">
+<meta property="og:image" content="http://oaewlsdmg.bkt.clouddn.com/image/jpg/QQ%E6%88%AA%E5%9B%BE20160907155152.png">
+<meta property="og:image" content="http://img.blog.csdn.net/20151106000550960">
+<meta property="og:updated_time" content="2016-09-07T16:10:08.721Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="深入JVM之JIT编译器">
+<meta name="twitter:description" content="上篇是分析了一下前段编译器，主要过程完成从java代码到字节码的转变，它的改进顶多是提高程序的编码速度和效率。本篇尝试探索JIT编译器，它能够完成从字节码到本地机器码的转变，从而真正的影响程序的运行效率。">
+<meta name="twitter:image" content="http://img.blog.csdn.net/20151105003122855">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: undefined,
+      author: 'Author'
+    }
+  };
+</script>
+
+  <title> 深入JVM之JIT编译器 | Gs Chen's blog </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?44cb51503f54763b661c4ae7590d184f";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Gs Chen's blog</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle"></p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-home fa-fw"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-th fa-fw"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-archive fa-fw"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-tags fa-fw"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-user fa-fw"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                深入JVM之JIT编译器
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">Posted on</span>
+            <time itemprop="dateCreated" datetime="2016-09-07T14:40:16+08:00" content="2016-09-07">
+              2016-09-07
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/JVM/" itemprop="url" rel="index">
+                    <span itemprop="name">JVM</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2016/09/07/深入JVM之JIT编译器/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/09/07/深入JVM之JIT编译器/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+             <span id="/2016/09/07/深入JVM之JIT编译器/" class="leancloud_visitors" data-flag-title="深入JVM之JIT编译器">
+               &nbsp; | &nbsp;
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               <span class="post-meta-item-text">visitors </span>
+               <span class="leancloud-visitors-count"></span>
+              </span>
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>上篇是分析了一下前段编译器，主要过程完成从java代码到字节码的转变，它的改进顶多是提高程序的编码速度和效率。本篇尝试探索JIT编译器，它能够完成从字节码到本地机器码的转变，从而真正的影响程序的运行效率。<br><a id="more"></a></p>
+<h3 id="概念"><a href="#概念" class="headerlink" title="概念"></a>概念</h3><p>部分商用虚拟机，程序最初是通过解释器（Interpreter）进行解释执行，当发现某个部分代码频繁执行的时候，就会将这些代码认定为「热点代码」（即 Hot Spot Code）。<strong>为了提高热点代码的执行效率，在运行时，虚拟机会把这些代码编译成与本地平台相关的机器码，并进行各种优化，完成这个任务的编译器成为即时编译器（Just In Time Compiler，简称JIT编译器）。</strong>（下文所指均为JIT）关于即时编译器需要知道的几点：</p>
+<ul>
+<li>它并不是VM必需的部分，java虚拟机规范并没有规定它必须存在，所以也没限定如何去实现。</li>
+<li>即时编译器编译性能的好坏、代码优化程度高低是衡量商用虚拟机优秀与否最关键指标之一。</li>
+</ul>
+<h3 id="Hotspot-VM的JIT编译器"><a href="#Hotspot-VM的JIT编译器" class="headerlink" title="Hotspot VM的JIT编译器"></a>Hotspot VM的JIT编译器</h3><h4 id="解释器和编译器"><a href="#解释器和编译器" class="headerlink" title="解释器和编译器"></a>解释器和编译器</h4><p>不是所有Java虚拟机均采用二者并存的架构，但是一些主流商用虚拟机如Hotspot、J9都会同时包含二者。关于二者的优势如下：</p>
+<ol>
+<li>程序刚启动和执行的时候，解释器可以首先发挥作用，省去编译的时间，立即执行字节码。</li>
+<li>程序运行之后，经过一段时间，编译器可以逐渐发挥作用，把更多的代码编译为本地机器码，获得更高的执行效率。</li>
+</ol>
+<p>在整个虚拟机执行架构中，解释器和编译器经常配合工作，如下图所示：<br><img src="http://img.blog.csdn.net/20151105003122855" alt=""><br>上图中内置了两个JIT编译器，分别称Client Compiler和Server Compiler，简称为C1编译器和C2编译器。目前主流的Hotspot VM（jdk1.7及以前版本虚拟机），默认采用与其中一个编译器直接配合，程序用哪个，取决于虚拟机运行模式，用户可以使用-client和-server参数强制指定虚拟机运行在client和server模式。<br>另外，通过下图的三种命令可以强制虚拟机运行的模式，分别为：Mixed Mode（混合模式，默认情况下解释器和编译器搭配使用）、Interpreter Mode（解释模式）、Compiled Mode（编译模式）。</p>
+<p><img src="http://oaewlsdmg.bkt.clouddn.com/image/jpg/QQ%E6%88%AA%E5%9B%BE20160907155152.png" alt=""><br>了解完解释器和编译器之后，我们想知道那些代码会被编译？在什么情况下会触发编译？基于这两个问题，来了解编译对象和触发条件。</p>
+<h4 id="编译对象"><a href="#编译对象" class="headerlink" title="编译对象"></a>编译对象</h4><p>在运行过程中会被即时编译器编译的「热点代码」有两类，如下：</p>
+<ul>
+<li>被多次调用的方法</li>
+<li>被多次执行的循环体</li>
+</ul>
+<p>关于这两种情况，有两点解释：对于第一种情况，是由方法调用触发的编译，理所当然的会以整个方法体作为编译对象，这种编译是虚拟机中标准的JIT编译。对于第二种情况，编译动作由循环体触发，但是编译器仍旧会以整个方法作为编译对象，由于这种方法发生在方法执行过程中，所以称为栈上替换（On Stack Replacement，简称OSR编译，因为方法栈帧还在栈上）。</p>
+<h4 id="触发条件"><a href="#触发条件" class="headerlink" title="触发条件"></a>触发条件</h4><p>正如上面所说的“多次”并不够严谨和具体，那么如何才算是“多次”呢？以及怎么样去统计一个方法和一段代码被执行多少次呢？回答了这两个问题就是回答了触发条件。<strong>判断一段代码是不是热点代码，是不是需要触发即时编译，这样的行为叫「热点探测」</strong>。关于热点探测有两种方式，如下：</p>
+<ul>
+<li>基于采样的热点探测<br>虚拟机会周期性检查各个线程的栈顶，如果发现某些方法长期占据栈顶，那么会被认为是「热点代码」。简单、高效，但是不够精确，因为某些方法会因为线程阻塞或其他原因扰乱热点探测。</li>
+<li>基于计数器的热点探测（Hotspot VM采用）<br>虚拟机为每个方法或者代码块建立计数器，统计执行次数，超过一定阀值会被认为是「热点代码」。</li>
+</ul>
+<p>Hotspot VM使用第二种，并且为每个方法准备了两种计数器：方法调用计数器和回边计数器（在字节码中遇到控制流向后跳转的指令称为“回边 ”）。在确定虚拟运行参数的情况下，这两个计数器都有一个确定的阀值，超过这个阀值就会触发JIT编译。方法调用计数器触发即时编译的交互过程如下图：<br><img src="http://img.blog.csdn.net/20151106000550960" alt=""><br>注意：方法调用计数器统计的并不是被调用的绝对次数，而是一个相对的执行频率，即一段时间被被调用的次数。</p>
+<h4 id="编译过程"><a href="#编译过程" class="headerlink" title="编译过程"></a>编译过程</h4><p><strong>在默认设置下，无论是方法调用产生的即时编译请求，还是OSR编译请求，虚拟机在代码编译还未完成之前，都仍然按照解释方式执行，而编译动作则在后台编译线程中进行。</strong>至于在后台如何执行编译过程，Client Compiler和Server Compiler的编译过程是不同的。二者大致区别如下：</p>
+<ul>
+<li>Client Compiler：主要关注点在局部优化，而放弃了耗时较长的全局优化手段。</li>
+<li>Server Compiler：是专门面向服务器端的典型应用并为服务端的性能配置特别调整过。</li>
+</ul>
+<p>从即时编译的角度看，Server Compiler是比较慢，但其编译速度又远远超过「静态优化编译器」，而且比Client Compiler输出的代码质量高，可以减少本地代码执行时间，从而抵消额外的编译时间。</p>
+<h3 id="编译优化技术"><a href="#编译优化技术" class="headerlink" title="编译优化技术"></a>编译优化技术</h3><p>之所以有编译方式执行本地代码比解释方式更快这样的共识，原因很简单，是因为虚拟机设计团队几乎把对代码所有的优化措施集中在了即时编译器之中，因此一般来说，即时编译器产生的本地代码会比Javac产生的字节码更优秀。常用优化技术如下：</p>
+<h4 id="公共子表达式消除"><a href="#公共子表达式消除" class="headerlink" title="公共子表达式消除"></a>公共子表达式消除</h4><p>语言无关，比如像：b乘c、c乘b这样的表达式值都是一样的可以直接替换。</p>
+<h4 id="数组范围消除"><a href="#数组范围消除" class="headerlink" title="数组范围消除"></a>数组范围消除</h4><p>语言相关，<strong>主要思路就是尽可能把运行期检查提任务前到编译器进行</strong>，以至于在循环遍历的时候不需要每次都要判断变量大小是否超过数组范围，带来隐式开销，只要在编译期根据数据流获得数组的length，并且判断下标没有越界，执行的时候就无需判断了。</p>
+<h4 id="方法内联"><a href="#方法内联" class="headerlink" title="方法内联"></a>方法内联</h4><p><strong>为了消除方法调用的成本，</strong>同时为其他优化手段建立好的基础。因为很多方法分开看是有意义的，如果不做方法内联，即使进行了无用代码消除，也无法发现任何“Dead Code”。</p>
+<h4 id="逃逸分析"><a href="#逃逸分析" class="headerlink" title="逃逸分析"></a>逃逸分析</h4><p><strong>并不是直接的优化手段，而是为其他优化手段提供分析技术。</strong>逃逸分析的基本行为就是分析对象的作用域，比如一个对象在一个方法中被定义，可能被外部方法所引用，例如作为方法参数传递到其他方法中，这被称为方法逃逸。甚至可能被其他线程访问，例如赋值给类变量或其他线程访问的实例变量，就是线程逃逸。</p>
+<p><strong>因此，如果能证明一个不会发生方法或者线程逃逸，则可以为这个变量进行一些高效优化。优化措施如下：</strong></p>
+<ul>
+<li>栈上分配<br>将确定不会逃逸的对象在在栈帧上进行创建分配内存，这样方法结束时，对象就会随着栈帧出栈而销毁，减少堆内存垃圾回收的压力。</li>
+<li>同步消除<br>如果确定一个变量不会线程逃逸，也就说明该变量不会发生线程竞争，从而消除掉该变量的同步措施。</li>
+<li>标量替换<br>像java中的原始数据类型如int、long均称为标量（表示无法分解为更小的数据来表示了），如果一个数据可以继续分解，则为聚合量，而java中的对象则为典型的聚合量。如果一个对象不会被外部访问，而这个对象可以被拆散分解，那么就不去创建这个对象，而是直接创建被使用到的成员变量。而这些成员变量除了被分配在栈上（栈上的数据很容易会被虚拟机分配到物理高速寄存器）进行读和写，还为后续优化创造基础条件。</li>
+</ul>
+<p>本篇主要了解解释器和编译器的特点和各自优势、然后总结了编译对象和编译条件，最后介绍了编译过程以及用到的一些主要的编译优化技术，算是对即时编译器有个基本的理解了。</p>
+<p>-EOF-</p>
+
+      
+    </div>
+    
+    <div>
+      
+        
+      
+    </div>
+
+    <div>
+      
+        
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/JVM/" rel="tag">#JVM</a>
+          
+            <a href="/tags/JIT/" rel="tag">#JIT</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/09/06/深入JVM之前端编译器/" rel="next" title="深入JVM之前端编译器">
+                <i class="fa fa-chevron-left"></i> 深入JVM之前端编译器
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        <!-- JiaThis Button BEGIN -->
+<div class="jiathis_style">
+  <a class="jiathis_button_tsina"></a>
+  <a class="jiathis_button_tqq"></a>
+  <a class="jiathis_button_weixin"></a>
+  <a class="jiathis_button_cqq"></a>
+  <a class="jiathis_button_douban"></a>
+  <a class="jiathis_button_renren"></a>
+  <a class="jiathis_button_qzone"></a>
+  <a class="jiathis_button_kaixin001"></a>
+  <a class="jiathis_button_copy"></a>
+  <a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jiathis_separator jtico jtico_jiathis" target="_blank"></a>
+  <a class="jiathis_counter_style"></a>
+</div>
+<script type="text/javascript" >
+  var jiathis_config={
+    hideMore:false
+  }
+</script>
+<script type="text/javascript" src="http://v3.jiathis.com/code/jia.js" charset="utf-8"></script>
+<!-- JiaThis Button END -->
+
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div class="ds-thread" data-thread-key="2016/09/07/深入JVM之JIT编译器/"
+           data-title="深入JVM之JIT编译器" data-url="https://zouzls.github.io/2016/09/07/深入JVM之JIT编译器/">
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/uploads/avatar.png"
+               alt="Gs Chen" />
+          <p class="site-author-name" itemprop="name">Gs Chen</p>
+          <p class="site-description motion-element" itemprop="description">Widen grain , Highten wall</p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">18</span>
+              <span class="site-state-item-name">posts</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">7</span>
+                <span class="site-state-item-name">categories</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">22</span>
+                <span class="site-state-item-name">tags</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/zouzls" target="_blank">
+                  
+                    <i class="fa fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="http://weibo.com/u/2109551834?is_all=1" target="_blank">
+                  
+                    <i class="fa fa-weibo"></i>
+                  
+                  Weibo
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="https://www.douban.com/people/zouzls/" target="_blank">
+                  
+                    <i class="fa fa-globe"></i>
+                  
+                  douban
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="https://www.zhihu.com/people/chen-gong-shuai" target="_blank">
+                  
+                    <i class="fa fa-globe"></i>
+                  
+                  zhihu
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        <div class="links-of-blogroll motion-element">
+          
+            <div class="links-of-blogroll-title">Links</div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://bodycoder101.github.io/" target="_blank">阿立</a>
+                </li>
+              
+            </ul>
+          
+        </div>
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#概念"><span class="nav-number">1.</span> <span class="nav-text">概念</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Hotspot-VM的JIT编译器"><span class="nav-number">2.</span> <span class="nav-text">Hotspot VM的JIT编译器</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#解释器和编译器"><span class="nav-number">2.1.</span> <span class="nav-text">解释器和编译器</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#编译对象"><span class="nav-number">2.2.</span> <span class="nav-text">编译对象</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#触发条件"><span class="nav-number">2.3.</span> <span class="nav-text">触发条件</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#编译过程"><span class="nav-number">2.4.</span> <span class="nav-text">编译过程</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#编译优化技术"><span class="nav-number">3.</span> <span class="nav-text">编译优化技术</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#公共子表达式消除"><span class="nav-number">3.1.</span> <span class="nav-text">公共子表达式消除</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#数组范围消除"><span class="nav-number">3.2.</span> <span class="nav-text">数组范围消除</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#方法内联"><span class="nav-number">3.3.</span> <span class="nav-text">方法内联</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#逃逸分析"><span class="nav-number">3.4.</span> <span class="nav-text">逃逸分析</span></a></li></ol></li></ol></div>
+            
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Gs Chen</span>
+</div>
+
+<div class="powered-by">
+  Powered by <a class="theme-link" href="http://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+  &nbsp&nbsp&nbsp&nbsp|&nbsp&nbsp&nbsp&nbsp<span id="busuanzi_container_site_pv">您是本站第 <span id="busuanzi_value_site_uv"></span>位访客</span>
+</div>
+<script async src="//dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+
+  
+
+
+
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=0.5.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=0.5.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=0.5.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=0.5.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=0.5.0"></script>
+
+
+
+  
+
+  
+    
+  
+
+  <script type="text/javascript">
+    var duoshuoQuery = {short_name:"zouzls"};
+    (function() {
+      var ds = document.createElement('script');
+      ds.type = 'text/javascript';ds.async = true;
+      ds.id = 'duoshuo-script';
+      ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '/js/embed.js';
+      ds.charset = 'UTF-8';
+      (document.getElementsByTagName('head')[0]
+      || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+  </script>
+
+  
+
+
+
+
+
+  
+  
+  
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("EunLkIm0xOFA4ygpTWAXwVKo-gzGzoHsz", "Bj4JrGlyqyFuK27yOwt8eDw8");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+</body>
+</html>

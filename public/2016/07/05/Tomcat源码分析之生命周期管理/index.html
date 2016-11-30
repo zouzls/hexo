@@ -1,0 +1,810 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css"/>
+
+
+
+
+  <link href="//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=0.5.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Tomcat,源码分析,生命周期管理," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="Gs Chen's blog" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favorite.png?v=0.5.0" />
+
+
+
+
+
+
+<meta name="description" content="Tomcat源码调试环境搭好了，但是打开源码却是一头雾水，不知从哪下手，我觉得这是阅读任何项目源码刚开始都会遇到的问题，但是问题从来不可怕，下面我在Tomcat源码分析中的一些理解吧。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Tomcat源码分析之生命周期管理">
+<meta property="og:url" content="https://zouzls.github.io/2016/07/05/Tomcat源码分析之生命周期管理/index.html">
+<meta property="og:site_name" content="Gs Chen's blog">
+<meta property="og:description" content="Tomcat源码调试环境搭好了，但是打开源码却是一头雾水，不知从哪下手，我觉得这是阅读任何项目源码刚开始都会遇到的问题，但是问题从来不可怕，下面我在Tomcat源码分析中的一些理解吧。">
+<meta property="og:updated_time" content="2016-08-26T10:48:39.742Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Tomcat源码分析之生命周期管理">
+<meta name="twitter:description" content="Tomcat源码调试环境搭好了，但是打开源码却是一头雾水，不知从哪下手，我觉得这是阅读任何项目源码刚开始都会遇到的问题，但是问题从来不可怕，下面我在Tomcat源码分析中的一些理解吧。">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: undefined,
+      author: 'Author'
+    }
+  };
+</script>
+
+  <title> Tomcat源码分析之生命周期管理 | Gs Chen's blog </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
+
+  
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?44cb51503f54763b661c4ae7590d184f";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Gs Chen's blog</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle"></p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-home fa-fw"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-th fa-fw"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-archive fa-fw"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-tags fa-fw"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-user fa-fw"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Tomcat源码分析之生命周期管理
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">Posted on</span>
+            <time itemprop="dateCreated" datetime="2016-07-05T19:33:47+08:00" content="2016-07-05">
+              2016-07-05
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/Tomcat/" itemprop="url" rel="index">
+                    <span itemprop="name">Tomcat</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2016/07/05/Tomcat源码分析之生命周期管理/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/07/05/Tomcat源码分析之生命周期管理/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+             <span id="/2016/07/05/Tomcat源码分析之生命周期管理/" class="leancloud_visitors" data-flag-title="Tomcat源码分析之生命周期管理">
+               &nbsp; | &nbsp;
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               <span class="post-meta-item-text">visitors </span>
+               <span class="leancloud-visitors-count"></span>
+              </span>
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>Tomcat源码调试环境搭好了，但是打开源码却是一头雾水，不知从哪下手，我觉得这是阅读任何项目源码刚开始都会遇到的问题，但是问题从来不可怕，下面我在Tomcat源码分析中的一些理解吧。<br><a id="more"></a></p>
+<h3 id="概念理解"><a href="#概念理解" class="headerlink" title="概念理解"></a>概念理解</h3><p>谈一下对「容器」、「生命周期」、「观察者模式」这个三个概念的理解，这几个是介绍Tomcat源码和系统架构的书籍和文章中常见的概念，也是理解Tomcat设计的精髓。</p>
+<ul>
+<li>容器<br>打开源码“/conf”目录下的server.xml文件，可以看到最顶层到里面依次有server、service、connector等等，这些解析之后便成为Tomcat的容器。我们姑且可以理解为管理子容器或者内部一些未知东西的工具。</li>
+<li>生命周期<br>容器有初始化（init）、开始（start）和停止（stop）等各种状态，如何去管理一个容器从开始到结束，这应该就是生命周期管理吧，先这么简单的理解吧，认识都是一个过程，暂时也没法理解的那么全面。</li>
+<li>观察者模式<br>不太理解的可以专门看看这个设计模式。这里可以简单理解为，把容器当做一个主题（subject），还有若干监听者（listener），容器状态的改变会触发监听者listener的一些动作等等。</li>
+</ul>
+<h3 id="关键类和接口"><a href="#关键类和接口" class="headerlink" title="关键类和接口"></a>关键类和接口</h3><ul>
+<li>Bootstrap<br>Tomcat源码工程巨大，但是总有一个入口，我们在启动Tomcat工程的时候，会发现项目是从Bootstrap类开始（org.apache.catalina.startup.Bootstrap.java）,main方法就在这里了，到此至少知道项目是从何处开始的了。</li>
+<li>StandardServer<br>该类是对Server的具体实现，Tomcat的生命周期就是由Server掌控，Server由此是Tomcat最高级的组件，没有之一，Tomcat启动之后，首先便是Server的启动。至于Server下面的service容器暂时先不管，知道了一种容器的生命周期，其他的也就类似了。</li>
+<li>LifecycleBase<br>该类是对Lifecycle接口的实现，所有的容器都是要继承该类的，StandardServer的继承关系是：StandardServer-LifecycleMBeanBase-LifecycleBase。</li>
+<li>LifecycleSupport<br>是LifecycleBase的一个支持辅助类吧，随着容器的新建会初始化new一个，容器状态如果改变，会帮忙搞定事件触发的操作。</li>
+<li>LifecycleListener<br>上面的三个类主要跟容器有关，而这是一个监听者接口，看下面源码中的注释就可以知道了这个接口的作用的，下面是完整接口：<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span><br><span class="line"> * Interface defining a listener for significant events (including "component</span><br><span class="line"> * start" and "component stop" generated by a component that implements the</span><br><span class="line"> * Lifecycle interface. The listener will be fired after the associated state</span><br><span class="line"> * change has taken place.</span><br><span class="line"> *</span><br><span class="line"> * <span class="doctag">@author</span> Craig R. McClanahan</span><br><span class="line"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">LifecycleListener</span> </span>&#123;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span><br><span class="line">     * Acknowledge the occurrence of the specified event.</span><br><span class="line">     *</span><br><span class="line">     * <span class="doctag">@param</span> event LifecycleEvent that has occurred</span><br><span class="line">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">lifecycleEvent</span><span class="params">(LifecycleEvent event)</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<p>翻译一下：接口定义了一个对一些重要events感兴趣的listener，主要是那些由实现了Lifecycle接口的组件所产生的包括“start”和“stop”的events事件，这个监听者会被关联的状态触发。</p>
+<h3 id="生命周期管理及观察流程"><a href="#生命周期管理及观察流程" class="headerlink" title="生命周期管理及观察流程"></a>生命周期管理及观察流程</h3><h4 id="StandardServer的startInternal-开始"><a href="#StandardServer的startInternal-开始" class="headerlink" title="StandardServer的startInternal()开始"></a>StandardServer的startInternal()开始</h4><p>StandardServer父类LifecycleBase中的start()方法被调用之后，紧接着StandardServer的startInternal()调用，下面是startInternal()的具体实现：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">startInternal</span><span class="params">()</span> <span class="keyword">throws</span> LifecycleException </span>&#123;</span><br><span class="line"></span><br><span class="line">    fireLifecycleEvent(CONFIGURE_START_EVENT, <span class="keyword">null</span>);<span class="comment">//容器启动，触发事件</span></span><br><span class="line">    setState(LifecycleState.STARTING);<span class="comment">//设置容器的状态为STARTING</span></span><br><span class="line"></span><br><span class="line">    globalNamingResources.start();</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// Start our defined Services</span></span><br><span class="line">    <span class="keyword">synchronized</span> (servicesLock) &#123;</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; services.length; i++) &#123;</span><br><span class="line">            services[i].start();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h4 id="LifecycleBase的fireLifecycleEvent-方法代理"><a href="#LifecycleBase的fireLifecycleEvent-方法代理" class="headerlink" title="LifecycleBase的fireLifecycleEvent()方法代理"></a>LifecycleBase的fireLifecycleEvent()方法代理</h4><p>因为我自己状态改变了下，我要把消息告诉那些监听者，StandardServer调用了父类LifecycleBase的fireLifecycleEvent()，该方法代码如下：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span><br><span class="line"> * <span class="doctag">@param</span> type  Event type</span><br><span class="line"> * <span class="doctag">@param</span> data  Data associated with event.</span><br><span class="line"> */</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">fireLifecycleEvent</span><span class="params">(String type, Object data)</span> </span>&#123;</span><br><span class="line">    lifecycle.fireLifecycleEvent(type, data);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>lifecycle是这么被定义的：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span><br><span class="line"> * Used to handle firing lifecycle events.</span><br><span class="line"> * <span class="doctag">TODO:</span> Consider merging LifecycleSupport into this class.</span><br><span class="line"> */</span></span><br><span class="line"><span class="keyword">private</span> LifecycleSupport lifecycle = <span class="keyword">new</span> LifecycleSupport(<span class="keyword">this</span>);</span><br></pre></td></tr></table></figure></p>
+<p>思考弄一下这里的this参数是什么，说白了LifecycleSupport就是专门定义一个帮忙干活的，this就是当前的容器实例。</p>
+<h4 id="LifecycleSupport的fireLifecycleEvent-方法被触发"><a href="#LifecycleSupport的fireLifecycleEvent-方法被触发" class="headerlink" title="LifecycleSupport的fireLifecycleEvent()方法被触发"></a>LifecycleSupport的fireLifecycleEvent()方法被触发</h4><p>直接上代码吧：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span><br><span class="line"> * Notify all lifecycle event listeners that a particular event has</span><br><span class="line"> * occurred for this Container.  The default implementation performs</span><br><span class="line"> * this notification synchronously using the calling thread.</span><br><span class="line"> *</span><br><span class="line"> * <span class="doctag">@param</span> type Event type</span><br><span class="line"> * <span class="doctag">@param</span> data Event data</span><br><span class="line"> */</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">fireLifecycleEvent</span><span class="params">(String type, Object data)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    LifecycleEvent event = <span class="keyword">new</span> LifecycleEvent(lifecycle, type, data);</span><br><span class="line">    LifecycleListener interested[] = listeners;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; interested.length; i++)</span><br><span class="line">        interested[i].lifecycleEvent(event);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>问题已经快水落石出了，LifecycleSupport似乎是维护了listener的一个数据结构，数组，如下代码所示：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span><br><span class="line"> * The set of registered LifecycleListeners for event notifications.</span><br><span class="line"> */</span></span><br><span class="line"><span class="keyword">private</span> LifecycleListener listeners[] = <span class="keyword">new</span> LifecycleListener[<span class="number">0</span>];</span><br></pre></td></tr></table></figure></p>
+<p>LifecycleSupport专门负责管理一些监听者（listener）的事情，比如：addLifecycleListener()、removeLifecycleListener()等等，跟listeners打交道的脏活累活最后都落到LifecycleSupport身上了。</p>
+<h4 id="LifecycleListener的lifecycleEvent-方法被触发"><a href="#LifecycleListener的lifecycleEvent-方法被触发" class="headerlink" title="LifecycleListener的lifecycleEvent()方法被触发"></a>LifecycleListener的lifecycleEvent()方法被触发</h4><p>因为LifecycleListener只是一个接口，所以举一个实现类为例，如NamingContextListener类，为什么拿这个举例后面就知道了，下面就是NamingContextListener的lifecycleEvent(LifecycleEvent event)方法：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span><br><span class="line"> * Acknowledge the occurrence of the specified event.</span><br><span class="line"> *</span><br><span class="line"> * <span class="doctag">@param</span> event LifecycleEvent that has occurred</span><br><span class="line"> */</span></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">lifecycleEvent</span><span class="params">(LifecycleEvent event)</span> </span>&#123;</span><br><span class="line">    ....<span class="comment">//略</span></span><br><span class="line">    <span class="keyword">if</span> (Lifecycle.CONFIGURE_START_EVENT.equals(event.getType())) &#123;</span><br><span class="line">        ....</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (Lifecycle.CONFIGURE_STOP_EVENT.equals(event.getType())) &#123;</span><br><span class="line">        <span class="keyword">if</span> (!initialized)</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            ...</span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            objectNames.clear();</span><br><span class="line"></span><br><span class="line">            namingContext = <span class="keyword">null</span>;</span><br><span class="line">            envCtx = <span class="keyword">null</span>;</span><br><span class="line">            compCtx = <span class="keyword">null</span>;</span><br><span class="line">            initialized = <span class="keyword">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>代码太长不贴那么多了，但是窥一斑可知，这里面做了很多事情，根据事件不同给出不同的处理。那么这个监听器是什么时候加入监听数组的呢？</p>
+<h4 id="LifecycleListener的加入"><a href="#LifecycleListener的加入" class="headerlink" title="LifecycleListener的加入"></a>LifecycleListener的加入</h4><p>因为我们一开始就只讨论Server这个容器，那么回到刚开始的Server的实现类StandardServer这个类，观察构造方法会发现：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span><br><span class="line"> * Construct a default instance of this class.</span><br><span class="line"> */</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">StandardServer</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">super</span>();</span><br><span class="line"></span><br><span class="line">    globalNamingResources = <span class="keyword">new</span> NamingResources();</span><br><span class="line">    globalNamingResources.setContainer(<span class="keyword">this</span>);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (isUseNaming()) &#123;</span><br><span class="line">        namingContextListener = <span class="keyword">new</span> NamingContextListener();</span><br><span class="line">        addLifecycleListener(namingContextListener);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>NamingContextListener这个listener是在容器创建之初就被放入了监听者行列，addLifecycleListener方法便是调用LifecycleBase的addLifecycleListener()这个代理方法，然后真正的脏活累活还是交给了前面交代的LifecycleSupport这个类来办。</p>
+<h3 id="最后"><a href="#最后" class="headerlink" title="最后"></a>最后</h3><p>容器的生命周期和观察者模式大概就是这么回事了，后面还有一些问题需要继续思考，比如Server下面的Service到底是什么东西，Service里面的connector和container又是什么鬼，再慢慢分析吧。</p>
+<p>-EOF-</p>
+
+      
+    </div>
+    
+    <div>
+      
+        
+      
+    </div>
+
+    <div>
+      
+        
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Tomcat/" rel="tag">#Tomcat</a>
+          
+            <a href="/tags/源码分析/" rel="tag">#源码分析</a>
+          
+            <a href="/tags/生命周期管理/" rel="tag">#生命周期管理</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/07/04/Tomcat源码分析之环境搭建/" rel="next" title="Tomcat源码分析之环境搭建">
+                <i class="fa fa-chevron-left"></i> Tomcat源码分析之环境搭建
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2016/07/20/Tomcat源码分析之Connector初始化与启动/" rel="prev" title="Tomcat源码分析之Connector初始化与启动">
+                Tomcat源码分析之Connector初始化与启动 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        <!-- JiaThis Button BEGIN -->
+<div class="jiathis_style">
+  <a class="jiathis_button_tsina"></a>
+  <a class="jiathis_button_tqq"></a>
+  <a class="jiathis_button_weixin"></a>
+  <a class="jiathis_button_cqq"></a>
+  <a class="jiathis_button_douban"></a>
+  <a class="jiathis_button_renren"></a>
+  <a class="jiathis_button_qzone"></a>
+  <a class="jiathis_button_kaixin001"></a>
+  <a class="jiathis_button_copy"></a>
+  <a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jiathis_separator jtico jtico_jiathis" target="_blank"></a>
+  <a class="jiathis_counter_style"></a>
+</div>
+<script type="text/javascript" >
+  var jiathis_config={
+    hideMore:false
+  }
+</script>
+<script type="text/javascript" src="http://v3.jiathis.com/code/jia.js" charset="utf-8"></script>
+<!-- JiaThis Button END -->
+
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div class="ds-thread" data-thread-key="2016/07/05/Tomcat源码分析之生命周期管理/"
+           data-title="Tomcat源码分析之生命周期管理" data-url="https://zouzls.github.io/2016/07/05/Tomcat源码分析之生命周期管理/">
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/uploads/avatar.png"
+               alt="Gs Chen" />
+          <p class="site-author-name" itemprop="name">Gs Chen</p>
+          <p class="site-description motion-element" itemprop="description">Widen grain , Highten wall</p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">22</span>
+              <span class="site-state-item-name">posts</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">10</span>
+                <span class="site-state-item-name">categories</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">28</span>
+                <span class="site-state-item-name">tags</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/zouzls" target="_blank">
+                  
+                    <i class="fa fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="http://weibo.com/u/2109551834?is_all=1" target="_blank">
+                  
+                    <i class="fa fa-weibo"></i>
+                  
+                  Weibo
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="https://www.douban.com/people/zouzls/" target="_blank">
+                  
+                    <i class="fa fa-globe"></i>
+                  
+                  douban
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="https://www.zhihu.com/people/chen-gong-shuai" target="_blank">
+                  
+                    <i class="fa fa-globe"></i>
+                  
+                  zhihu
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        <div class="links-of-blogroll motion-element">
+          
+            <div class="links-of-blogroll-title">Links</div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://bodycoder101.github.io/" target="_blank">阿立</a>
+                </li>
+              
+            </ul>
+          
+        </div>
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#概念理解"><span class="nav-number">1.</span> <span class="nav-text">概念理解</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#关键类和接口"><span class="nav-number">2.</span> <span class="nav-text">关键类和接口</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#生命周期管理及观察流程"><span class="nav-number">3.</span> <span class="nav-text">生命周期管理及观察流程</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#StandardServer的startInternal-开始"><span class="nav-number">3.1.</span> <span class="nav-text">StandardServer的startInternal()开始</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#LifecycleBase的fireLifecycleEvent-方法代理"><span class="nav-number">3.2.</span> <span class="nav-text">LifecycleBase的fireLifecycleEvent()方法代理</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#LifecycleSupport的fireLifecycleEvent-方法被触发"><span class="nav-number">3.3.</span> <span class="nav-text">LifecycleSupport的fireLifecycleEvent()方法被触发</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#LifecycleListener的lifecycleEvent-方法被触发"><span class="nav-number">3.4.</span> <span class="nav-text">LifecycleListener的lifecycleEvent()方法被触发</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#LifecycleListener的加入"><span class="nav-number">3.5.</span> <span class="nav-text">LifecycleListener的加入</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#最后"><span class="nav-number">4.</span> <span class="nav-text">最后</span></a></li></ol></div>
+            
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Gs Chen</span>
+</div>
+
+<div class="powered-by">
+  Powered by <a class="theme-link" href="http://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+  &nbsp&nbsp&nbsp&nbsp|&nbsp&nbsp&nbsp&nbsp<span id="busuanzi_container_site_pv">您是本站第 <span id="busuanzi_value_site_uv"></span>位访客</span>
+</div>
+<script async src="//dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+
+  
+
+
+
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=0.5.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=0.5.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=0.5.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=0.5.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=0.5.0"></script>
+
+
+
+  
+
+  
+    
+  
+
+  <script type="text/javascript">
+    var duoshuoQuery = {short_name:"zouzls"};
+    (function() {
+      var ds = document.createElement('script');
+      ds.type = 'text/javascript';ds.async = true;
+      ds.id = 'duoshuo-script';
+      ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '/js/embed.js';
+      ds.charset = 'UTF-8';
+      (document.getElementsByTagName('head')[0]
+      || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+  </script>
+
+  
+
+
+
+
+
+  
+  
+  
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("EunLkIm0xOFA4ygpTWAXwVKo-gzGzoHsz", "Bj4JrGlyqyFuK27yOwt8eDw8");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+
+</body>
+</html>

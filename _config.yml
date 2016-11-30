@@ -3,16 +3,16 @@
 ## Source: https://github.com/hexojs/hexo/
 
 # Site
-title: gs chen's blog
-subtitle:
-description: 广积粮，高筑墙
-author: chengs
-language: zh-Hans
+title: Gs Chen's blog
+subtitle: 
+description: Widen grain , Highten wall
+author: Gs Chen
+language: en
 timezone:
 
 # URL
 ## If your site is put in a subdirectory, set url as 'http://yoursite.com/child' and root as '/child/'
-url: http://zouzls.github.io/
+url: https://zouzls.github.io/
 root: /
 permalink: :year/:month/:day/:title/
 permalink_defaults:
@@ -75,6 +75,8 @@ avatar: /uploads/avatar.png
 duoshuo_shortname: zouzls
 baidu_analytics: 44cb51503f54763b661c4ae7590d184f
 
+include:
+  - .nojekyll
 
 feed:
   type: atom
@@ -84,3 +86,5 @@ feed:
 
 sitemap:
   path: sitemap.xml
+
+jiathis: true

@@ -32,7 +32,7 @@
 
 
 
-  <link href="//fonts.useso.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  <link href="//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
 
 
 
@@ -47,7 +47,7 @@
 
 
 
-  <link rel="alternate" href="/atom.xml" title="gs chen's blog" type="application/atom+xml" />
+  <link rel="alternate" href="/atom.xml" title="Gs Chen's blog" type="application/atom+xml" />
 
 
 
@@ -61,13 +61,13 @@
 
 <meta name="description" content="从很久之前就想要有一个属于自己的博客，如果互联网是一个世界的话，一个有着自己独特域名的博客应该就是在这个世界里面的自己的家吧。由于毕业后工作，后来又忙着考研，这个简单的愿望一直搁浅。现在趁着有闲暇的精力，终于把这个一拖再拖的事情给实现，搭建过程总体是简单的，没有费多少力气，但是还是遇到了一些小问题，现在将遇到的问题记录下来。">
 <meta property="og:type" content="article">
-<meta property="og:title" content="用hexo搭建个人博客">
-<meta property="og:url" content="http://zouzls.github.io/2016/04/21/用hexo搭建个人博客/index.html">
-<meta property="og:site_name" content="gs chen's blog">
+<meta property="og:title" content="用Hexo搭建个人博客">
+<meta property="og:url" content="https://zouzls.github.io/2016/04/21/用hexo搭建个人博客/index.html">
+<meta property="og:site_name" content="Gs Chen's blog">
 <meta property="og:description" content="从很久之前就想要有一个属于自己的博客，如果互联网是一个世界的话，一个有着自己独特域名的博客应该就是在这个世界里面的自己的家吧。由于毕业后工作，后来又忙着考研，这个简单的愿望一直搁浅。现在趁着有闲暇的精力，终于把这个一拖再拖的事情给实现，搭建过程总体是简单的，没有费多少力气，但是还是遇到了一些小问题，现在将遇到的问题记录下来。">
-<meta property="og:updated_time" content="2016-04-22T16:35:15.740Z">
+<meta property="og:updated_time" content="2016-07-16T03:57:18.795Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="用hexo搭建个人博客">
+<meta name="twitter:title" content="用Hexo搭建个人博客">
 <meta name="twitter:description" content="从很久之前就想要有一个属于自己的博客，如果互联网是一个世界的话，一个有着自己独特域名的博客应该就是在这个世界里面的自己的家吧。由于毕业后工作，后来又忙着考研，这个简单的愿望一直搁浅。现在趁着有闲暇的精力，终于把这个一拖再拖的事情给实现，搭建过程总体是简单的，没有费多少力气，但是还是遇到了一些小问题，现在将遇到的问题记录下来。">
 
 
@@ -80,16 +80,16 @@
     fancybox: true,
     motion: true,
     duoshuo: {
-      userId: 0,
-      author: '博主'
+      userId: undefined,
+      author: 'Author'
     }
   };
 </script>
 
-  <title> 用hexo搭建个人博客 | gs chen's blog </title>
+  <title> 用Hexo搭建个人博客 | Gs Chen's blog </title>
 </head>
 
-<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+<body itemscope itemtype="http://schema.org/WebPage" lang="en">
 
   
 
@@ -127,7 +127,7 @@
   <div class="custom-logo-site-title">
     <a href="/"  class="brand" rel="start">
       <span class="logo-line-before"><i></i></span>
-      <span class="site-title">gs chen's blog</span>
+      <span class="site-title">Gs Chen's blog</span>
       <span class="logo-line-after"><i></i></span>
     </a>
   </div>
@@ -154,7 +154,17 @@
             
               <i class="menu-item-icon fa fa-home fa-fw"></i> <br />
             
-            首页
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-th fa-fw"></i> <br />
+            
+            Categories
           </a>
         </li>
       
@@ -164,7 +174,7 @@
             
               <i class="menu-item-icon fa fa-archive fa-fw"></i> <br />
             
-            归档
+            Archives
           </a>
         </li>
       
@@ -174,7 +184,7 @@
             
               <i class="menu-item-icon fa fa-tags fa-fw"></i> <br />
             
-            标签
+            Tags
           </a>
         </li>
       
@@ -184,17 +194,7 @@
             
               <i class="menu-item-icon fa fa-user fa-fw"></i> <br />
             
-            关于
-          </a>
-        </li>
-      
-        
-        <li class="menu-item menu-item-commonweal">
-          <a href="/404.html" rel="section">
-            
-              <i class="menu-item-icon fa fa-heartbeat fa-fw"></i> <br />
-            
-            公益404
+            About
           </a>
         </li>
       
@@ -236,7 +236,7 @@
             
             
               
-                用hexo搭建个人博客
+                用Hexo搭建个人博客
               
             
           </h1>
@@ -247,7 +247,7 @@
             <span class="post-meta-item-icon">
               <i class="fa fa-calendar-o"></i>
             </span>
-            <span class="post-meta-item-text">发表于</span>
+            <span class="post-meta-item-text">Posted on</span>
             <time itemprop="dateCreated" datetime="2016-04-21T23:26:12+08:00" content="2016-04-21">
               2016-04-21
             </time>
@@ -259,11 +259,11 @@
               <span class="post-meta-item-icon">
                 <i class="fa fa-folder-o"></i>
               </span>
-              <span class="post-meta-item-text">分类于</span>
+              <span class="post-meta-item-text">In</span>
               
                 <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
-                  <a href="/categories/blog/" itemprop="url" rel="index">
-                    <span itemprop="name">blog</span>
+                  <a href="/categories/Hexo/" itemprop="url" rel="index">
+                    <span itemprop="name">Hexo</span>
                   </a>
                 </span>
 
@@ -289,6 +289,15 @@
 
           
           
+             <span id="/2016/04/21/用hexo搭建个人博客/" class="leancloud_visitors" data-flag-title="用Hexo搭建个人博客">
+               &nbsp; | &nbsp;
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               <span class="post-meta-item-text">visitors </span>
+               <span class="leancloud-visitors-count"></span>
+              </span>
+          
 
         </div>
       </header>
@@ -311,7 +320,7 @@
 <h4 id="出现问题"><a href="#出现问题" class="headerlink" title="出现问题"></a>出现问题</h4><ul>
 <li>问题描述</li>
 </ul>
-<p>因为我是先在本地<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git init 、git add origin &lt;server&gt;</span><br></pre></td></tr></table></figure></p>
+<p>因为我是先在本地<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">git init </span><br><span class="line">git add origin &lt;server&gt;</span><br></pre></td></tr></table></figure></p>
 <p>初始化本地文件夹，然后<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">git add .</span><br><span class="line">git commit -m &quot;description&quot;</span><br><span class="line">git push origin hexo</span><br></pre></td></tr></table></figure></p>
 <p>最后一步失败。尝试过git pull命令、并将hexo分支文件清空，然而都无济于事。</p>
 <ul>
@@ -321,6 +330,7 @@
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">git add .</span><br><span class="line">git commit -m &quot;description&quot;</span><br><span class="line">git push origin hexo</span><br></pre></td></tr></table></figure>
 <p>然后解决问题，博客源码推送到hexo分支，再在新的电脑将源码clone下来就OK了，前提是已经安装有git、nodejs、hexo。至于由博客生成的静态html文件如何放到master分支，网上太多教程就不详述了。</p>
 <h3 id="最后"><a href="#最后" class="headerlink" title="最后"></a>最后</h3><p>人生有涯，知也无涯。<br>坚持学习，保持好奇心。<br>坚持锻炼身体。</p>
+<p>-EOF-</p>
 
       
     </div>
@@ -328,11 +338,6 @@
     <div>
       
         
-<div id="wechat_subscriber" style="display: block； padding: 10px 0; margin: 20px auto; width: 100%; text-align: center">
-    <img id="wechat_subscriber_qcode" src="/uploads/wechat-reward-image.png" alt="chengs wechat" style="width: 200px; max-width: 100%;"/>
-    <div>坚持原创技术分享，您的支持将鼓励我继续创作！</div>
-</div>
-
       
     </div>
 
@@ -352,6 +357,24 @@
       
 
       
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2014/04/20/朝花夕拾之论纸老虎/" rel="next" title="朝花夕拾之论纸老虎">
+                <i class="fa fa-chevron-left"></i> 朝花夕拾之论纸老虎
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2016/06/17/how-do-servlets-work-instantiation/" rel="prev" title="How do servlets work? Instantiation, shared variables and multithreading">
+                How do servlets work? Instantiation, shared variables and multithreading <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
 
       
       
@@ -361,6 +384,29 @@
 
 
     <div class="post-spread">
+      
+        <!-- JiaThis Button BEGIN -->
+<div class="jiathis_style">
+  <a class="jiathis_button_tsina"></a>
+  <a class="jiathis_button_tqq"></a>
+  <a class="jiathis_button_weixin"></a>
+  <a class="jiathis_button_cqq"></a>
+  <a class="jiathis_button_douban"></a>
+  <a class="jiathis_button_renren"></a>
+  <a class="jiathis_button_qzone"></a>
+  <a class="jiathis_button_kaixin001"></a>
+  <a class="jiathis_button_copy"></a>
+  <a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jiathis_separator jtico jtico_jiathis" target="_blank"></a>
+  <a class="jiathis_counter_style"></a>
+</div>
+<script type="text/javascript" >
+  var jiathis_config={
+    hideMore:false
+  }
+</script>
+<script type="text/javascript" src="http://v3.jiathis.com/code/jia.js" charset="utf-8"></script>
+<!-- JiaThis Button END -->
+
       
     </div>
   </div>
@@ -374,7 +420,7 @@
   <div class="comments" id="comments">
     
       <div class="ds-thread" data-thread-key="2016/04/21/用hexo搭建个人博客/"
-           data-title="用hexo搭建个人博客" data-url="http://zouzls.github.io/2016/04/21/用hexo搭建个人博客/">
+           data-title="用Hexo搭建个人博客" data-url="https://zouzls.github.io/2016/04/21/用hexo搭建个人博客/">
       </div>
     
   </div>
@@ -400,10 +446,10 @@
       
         <ul class="sidebar-nav motion-element">
           <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
-            文章目录
+            Table of Contents
           </li>
           <li class="sidebar-nav-overview" data-target="site-overview">
-            站点概览
+            Overview
           </li>
         </ul>
       
@@ -412,32 +458,32 @@
         <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
           <img class="site-author-image" itemprop="image"
                src="/uploads/avatar.png"
-               alt="chengs" />
-          <p class="site-author-name" itemprop="name">chengs</p>
-          <p class="site-description motion-element" itemprop="description">广积粮，高筑墙</p>
+               alt="Gs Chen" />
+          <p class="site-author-name" itemprop="name">Gs Chen</p>
+          <p class="site-description motion-element" itemprop="description">Widen grain , Highten wall</p>
         </div>
         <nav class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">1</span>
-              <span class="site-state-item-name">日志</span>
+              <span class="site-state-item-count">22</span>
+              <span class="site-state-item-name">posts</span>
             </a>
           </div>
 
           
             <div class="site-state-item site-state-categories">
-              
-                <span class="site-state-item-count">1</span>
-                <span class="site-state-item-name">分类</span>
-              
+              <a href="/categories">
+                <span class="site-state-item-count">10</span>
+                <span class="site-state-item-name">categories</span>
+              </a>
             </div>
           
 
           
             <div class="site-state-item site-state-tags">
               <a href="/tags">
-                <span class="site-state-item-count">1</span>
-                <span class="site-state-item-name">标签</span>
+                <span class="site-state-item-count">28</span>
+                <span class="site-state-item-name">tags</span>
               </a>
             </div>
           
@@ -501,6 +547,15 @@
         
         <div class="links-of-blogroll motion-element">
           
+            <div class="links-of-blogroll-title">Links</div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://bodycoder101.github.io/" target="_blank">阿立</a>
+                </li>
+              
+            </ul>
+          
         </div>
 
       </section>
@@ -535,15 +590,15 @@
   <span class="with-love">
     <i class="fa fa-heart"></i>
   </span>
-  <span class="author" itemprop="copyrightHolder">chengs</span>
+  <span class="author" itemprop="copyrightHolder">Gs Chen</span>
 </div>
 
 <div class="powered-by">
-  由 <a class="theme-link" href="http://hexo.io">Hexo</a> 强力驱动
+  Powered by <a class="theme-link" href="http://hexo.io">Hexo</a>
 </div>
 
 <div class="theme-info">
-  主题 -
+  Theme -
   <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
     NexT.Mist
   </a>
@@ -625,7 +680,7 @@
       var ds = document.createElement('script');
       ds.type = 'text/javascript';ds.async = true;
       ds.id = 'duoshuo-script';
-      ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+      ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '/js/embed.js';
       ds.charset = 'UTF-8';
       (document.getElementsByTagName('head')[0]
       || document.getElementsByTagName('body')[0]).appendChild(ds);
@@ -633,8 +688,6 @@
   </script>
 
   
-    
-  
 
 
 
@@ -645,6 +698,99 @@
   
 
   
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("EunLkIm0xOFA4ygpTWAXwVKo-gzGzoHsz", "Bj4JrGlyqyFuK27yOwt8eDw8");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
 
   
 

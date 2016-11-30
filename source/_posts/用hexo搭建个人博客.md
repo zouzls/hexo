@@ -1,8 +1,8 @@
 ---
-title: 用hexo搭建个人博客
+title: 用Hexo搭建个人博客
 date: 2016-04-21 23:26:12
 tags: blog
-categories: blog
+categories: Hexo
 ---
 从很久之前就想要有一个属于自己的博客，如果互联网是一个世界的话，一个有着自己独特域名的博客应该就是在这个世界里面的自己的家吧。由于毕业后工作，后来又忙着考研，这个简单的愿望一直搁浅。
 现在趁着有闲暇的精力，终于把这个一拖再拖的事情给实现，搭建过程总体是简单的，没有费多少力气，但是还是遇到了一些小问题，现在将遇到的问题记录下来。
@@ -24,7 +24,8 @@ categories: blog
 
 因为我是先在本地
 ```
-git init 、git add origin <server>
+git init 
+git add origin <server>
 ```
 初始化本地文件夹，然后
 ```
@@ -53,3 +54,4 @@ git push origin hexo
 坚持学习，保持好奇心。
 坚持锻炼身体。
 
+-EOF-
